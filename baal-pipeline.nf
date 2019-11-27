@@ -1,29 +1,51 @@
 #!/usr/bin/env nextflow
 
-params.str = 'Hello world!'
+params.staging_root = "${workflow.launchDir}/test/staging/runs"
+params.experiments = "${params.staging_root}/runs.csv"
+params.report_dir = "${workflow.launchDir}/test/reports/"
 
-process splitLetters {
+Channel
+    .fromPath(params.experiments)
+    .splitCsv(header:true)
+    .map({row -> tuple(row.cell_line, row.transcription_factor, row.path )})
+    .flatMap({cell_line, transcription_factor, path -> file("${params.staging_root}/${path}/experiments/*", type: "dir")})
+    .flatMap({path -> file("${path}/*/*.fastq.gz")})
+    .map { file ->
+        def sampleID = file.getParent().getName()
+        return tuple(sampleID, file)
+    }
+    .into{ fastqc_input; trim_galore_input }
 
-    output:
-    file 'chunk_*' into letters
 
-    """
-    printf '${params.str}' | split -b 6 - chunk_
-    """
-}
-
-
-process convertToUpper {
+process fastQC {
+    publishDir("${params.report_dir}/${sampleID}", mode: "move")
 
     input:
-    file x from letters.flatten()
+    set sampleID, file("${sampleID}.fastq.gz") from fastqc_input
 
     output:
-    stdout result
+    file "${sampleID}_fastqc*" into fastqc_out
 
+    script:
     """
-    cat $x | tr '[a-z]' '[A-Z]'
+    fastqc ${sampleID}.fastq.gz
     """
 }
 
-result.view { it.trim() }
+
+
+process trimGalore {
+    publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "*report*")
+
+    input:
+    set sampleID, file("${sampleID}.fastq.gz") from trim_galore_input
+
+    output:
+    file '*trimmed*' into trim_galore_out
+    file '*report*'
+
+    script:
+    """
+    trim_galore ${sampleID}.fastq.gz
+    """
+}
