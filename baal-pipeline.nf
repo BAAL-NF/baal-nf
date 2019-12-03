@@ -4,6 +4,7 @@ params.staging_root = "${workflow.launchDir}/test/staging/runs"
 params.experiments = "${params.staging_root}/runs.csv"
 params.report_dir = "${workflow.launchDir}/test/reports/"
 params.genome = "hg19"
+params.picard_cmd = "picard"
 
 Channel
     .fromPath(params.experiments)
@@ -121,18 +122,32 @@ process sortAndCompress {
     set sampleID, file(samfile) from aligned_sequences
 
     output:
-    set sampleID, file("${samfile}.bam") into bamfiles
+    set sampleID, file("${samfile.baseName}.bam") into bamfiles
 
     """
     samtools sort ${samfile} -o ${samfile}.sorted
-    samtools view -h -S -b ${samfile}.sorted > ${samfile}.bam
+    samtools view -h -S -b ${samfile}.sorted > ${samfile.baseName}.bam
     """
 }
 
+process markDuplicates {
+    publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "**.metrics")
+
+    input:
+    set sampleID, file(bamfile) from bamfiles
+
+    output:
+    set sampleID, file("${bamfile.baseName}_dedup.bam") into marked_bamfiles
+    file "${bamfile.baseName}.metrics"
+
+    """
+    ${params.picard_cmd} MarkDuplicates I="${bamfile}" O="${bamfile.baseName}_dedup.bam" M="${bamfile.baseName}.metrics"
+    """
+}
 
 process index {
     input:
-    set sampleID, file(bamfile) from bamfiles
+    set sampleID, file(bamfile) from marked_bamfiles
 
     output:
     set sampleID, file(bamfile), file("${bamfile}.bai") into indexed_bamfiles
