@@ -48,7 +48,6 @@ process trimGalore {
     file '*report*'
 
     script:
-    println("${sampleID} ${files}")
     switch (files) {
          case nextflow.processor.TaskPath:
          return """trim_galore --basename ${sampleID}_tg ${files}"""
@@ -117,11 +116,28 @@ process align {
     }
 }
 
-// process sortAndCompress {
-//     input:
-//     set sampleID, file(samfile) from aligned_sequences
+process sortAndCompress {
+    input:
+    set sampleID, file(samfile) from aligned_sequences
 
-//     output:
-//     set sampleID, file()
+    output:
+    set sampleID, file("${samfile}.bam") into bamfiles
 
-// }
+    """
+    samtools sort ${samfile} -o ${samfile}.sorted
+    samtools view -h -S -b ${samfile}.sorted > ${samfile}.bam
+    """
+}
+
+
+process index {
+    input:
+    set sampleID, file(bamfile) from bamfiles
+
+    output:
+    set sampleID, file(bamfile), file("${bamfile}.bai") into indexed_bamfiles
+
+    """
+    samtools index ${bamfile}
+    """
+}
