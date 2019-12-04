@@ -20,6 +20,7 @@ Channel
     .into{ fastqc_input; for_trim_galore }
 
 process fastQC {
+    label 'fastq'
     publishDir("${params.report_dir}/${sampleID}", mode: "move")
 
     input:
@@ -39,6 +40,7 @@ process fastQC {
 trim_galore_input = for_trim_galore.groupTuple()
 
 process trimGalore {
+    label 'fastq'
     publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "*report*")
 
     input:
@@ -68,6 +70,7 @@ trim_galore_out.into {
 }
 
 process fastqScreen {
+    label 'fastq'
     publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "*screen*")
 
     input:
@@ -93,6 +96,7 @@ process fastqScreen {
 }
 
 process align {
+    label 'fastq'
     memory '8GB'
 
     input:
@@ -118,6 +122,7 @@ process align {
 }
 
 process sortAndCompress {
+    label 'fastq'
     input:
     set sampleID, file(samfile) from aligned_sequences
 
@@ -131,6 +136,7 @@ process sortAndCompress {
 }
 
 process markDuplicates {
+    label 'fastq'
     publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "**.metrics")
 
     input:
@@ -146,6 +152,7 @@ process markDuplicates {
 }
 
 process index {
+    label 'fastq'
     input:
     set sampleID, file(bamfile) from marked_bamfiles
 
@@ -156,3 +163,4 @@ process index {
     samtools index ${bamfile}
     """
 }
+
