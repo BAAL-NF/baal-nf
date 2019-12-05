@@ -97,7 +97,7 @@ process fastqScreen {
 
 process align {
     label 'fastq'
-    memory '8GB'
+    label 'bigmem'
 
     input:
     set sampleID, file(trimmed) from bowtie_input
