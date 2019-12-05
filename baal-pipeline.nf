@@ -83,7 +83,7 @@ process fastqScreen {
     script:
     let optargs = ''
 
-    if (params.fastq_screen_conf?){
+    if (params.fastq_screen_conf != null && !params.fastq_screen_conf.isEmpty()){
         optargs += "--conf ${params.fastq_screen_conf}"
     }
 
