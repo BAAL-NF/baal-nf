@@ -81,12 +81,18 @@ process fastqScreen {
     file '*screen*'
 
     script:
+    let optargs = ''
+
+    if (params.fastq_screen_conf?){
+        optargs += "--conf ${params.fastq_screen_conf}"
+    }
+
     switch (trimmed) {
         case nextflow.processor.TaskPath:
-        return """fastq_screen ${trimmed}"""
+        return """fastq_screen ${optargs} ${trimmed}"""
 
         case nextflow.util.BlankSeparatedList:
-        return """fastq_screen --paired ${trimmed}"""
+        return """fastq_screen ${optargs} --paired ${trimmed}"""
 
         default:
         println("Error getting files for sample ${sampleID}, exiting")
