@@ -5,19 +5,28 @@ params.experiments = "${params.staging_root}/runs.csv"
 params.report_dir = "${workflow.launchDir}/test/reports/"
 params.genome = "hg19"
 params.picard_cmd = "picard"
+params.fastq_screen_conf = ""
 
 Channel
     .fromPath(params.experiments)
     .splitCsv(header:true)
     .map({row -> tuple(row.cell_line, row.transcription_factor, row.path )})
-    .flatMap({cell_line, transcription_factor, path -> file("${params.staging_root}/${path}/experiments/*", type: "dir")})
-    .flatMap({folder -> file("${folder}/*/*.fastq.gz")})
-    .map { file ->
-        def sampleID = file.getParent().getName()
+    .map({cell_line, transcription_factor, path -> [cell_line, transcription_factor, file("${params.staging_root}/${path}/experiments/**/*.fastq.gz")]})
+    .map({cell_line, transcription_factor, file_list ->
+        tag = "${cell_line}_${transcription_factor}"
+        sample_ids = file_list.collect { file -> file.getParent().getName() }
+        num_samples = sample_ids.unique(false).size()
+        [ groupKey(tag, num_samples), cell_line, transcription_factor, sample_ids, file_list ]
+    })
+    .transpose()
+    .fork { key,  cell_line, transcription_factor, sampleID, file ->
         def filename = file.name
-        return tuple(sampleID, filename, file)
+        srr_ch: tuple(sampleID, filename, file)
+        baal_ch: tuple(sampleID, key, cell_line, transcription_factor)
     }
-    .into{ fastqc_input; for_trim_galore }
+    .set { samples }
+
+samples.srr_ch.into{ fastqc_input; for_trim_galore }
 
 process fastQC {
     label 'fastq'
@@ -168,5 +177,30 @@ process index {
     """
     samtools index ${bamfile}
     """
+}
+
+samples.baal_ch
+    .join(indexed_bamfiles)
+    .groupTuple(by: 1)
+    .into { baal_file_ch; baal_process_bams_ch }
+
+process createSampleFile {
+    publishDir("${params.report_dir}/samples/")
+
+    input:
+    set samples, group_name, cell_lines, antigens, bamfiles, index_files from baal_file_ch
+
+    output:
+    file "${group_name}.tsv" into sample_files
+
+    script:
+        output = "cat << EOF > ${group_name}.tsv\n"
+        output += "group_name\ttarget\treplicate_number\tbam_name\tbed_name\tsampleID\n"
+        0.upto(samples.size()-1, {
+            replicate = it + 1
+            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it].name}\tfake.bed\t${samples[it]}\n"
+        })
+        output += "EOF\n"
+        output
 }
 
