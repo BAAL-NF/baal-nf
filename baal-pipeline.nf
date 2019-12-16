@@ -10,10 +10,12 @@ params.fastq_screen_conf = ""
 Channel
     .fromPath(params.experiments)
     .splitCsv(header:true)
-    .map({row -> tuple(row.cell_line, row.transcription_factor, row.path )})
-    .map({cell_line, transcription_factor, path -> [cell_line, transcription_factor, file("${params.staging_root}/${path}/experiments/**/*.fastq.gz")]})
-    .map({cell_line, transcription_factor, file_list ->
-        tag = "${cell_line}_${transcription_factor}"
+    .map({row -> tuple("${row.cell_line}_${row.transcription_factor}", row.cell_line, row.transcription_factor, row.path )})
+    .into{ experiments_ch; samples_ch }
+
+samples_ch
+    .map({tag, cell_line, transcription_factor, path -> [tag, cell_line, transcription_factor, file("${params.staging_root}/${path}/experiments/**/*.fastq.gz")]})
+    .map({tag, cell_line, transcription_factor, file_list ->
         sample_ids = file_list.collect { file -> file.getParent().getName() }
         num_samples = sample_ids.unique(false).size()
         [ groupKey(tag, num_samples), cell_line, transcription_factor, sample_ids, file_list ]
@@ -204,3 +206,10 @@ process createSampleFile {
         output
 }
 
+
+experiments_ch
+    .flatMap({tag, cell_line, transcription_factor, path -> file("${params.staging_root}/${path}/experiments/**/*.bed")})
+    .map({file ->
+        [ file.getParent().getName(), file ]
+    })
+    .set{ bed_ch }
