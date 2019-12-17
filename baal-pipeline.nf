@@ -10,21 +10,24 @@ params.fastq_screen_conf = ""
 Channel
     .fromPath(params.experiments)
     .splitCsv(header:true)
-    .map({row -> tuple("${row.cell_line}_${row.transcription_factor}", row.cell_line, row.transcription_factor, row.path )})
-    .into{ experiments_ch; samples_ch }
-
-samples_ch
-    .map({tag, cell_line, transcription_factor, path -> [tag, cell_line, transcription_factor, file("${params.staging_root}/${path}/experiments/**/*.fastq.gz")]})
-    .map({tag, cell_line, transcription_factor, file_list ->
-        sample_ids = file_list.collect { file -> file.getParent().getName() }
-        num_samples = sample_ids.unique(false).size()
-        [ groupKey(tag, num_samples), cell_line, transcription_factor, sample_ids, file_list ]
+    .map({row -> tuple("${row.cell_line}_${row.transcription_factor}",
+                        row.cell_line,
+                        row.transcription_factor,
+                        row.experiment,
+                        row.run,
+                        file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
+                        file("${params.staging_root}/${row.bed_file}"))})
+    .groupTuple()
+    .map({tag, cell_lines, transcription_factors, experiments, runs, fastq_files, bed_files ->
+        num_samples = runs.size()
+        [ groupKey(tag, num_samples), cell_lines, transcription_factors, experiments, runs, fastq_files, bed_files ]
     })
     .transpose()
-    .fork { key,  cell_line, transcription_factor, sampleID, file ->
-        def filename = file.name
-        srr_ch: tuple(sampleID, filename, file)
-        baal_ch: tuple(sampleID, key, cell_line, transcription_factor)
+    .transpose()
+    .fork { key, cell_line, transcription_factor, experiment, run, fastq_file, bam_file ->
+        filename = fastq_file.name
+        srr_ch: tuple(run, filename, fastq_file)
+        baal_ch: tuple(run, key, cell_line, transcription_factor, experiment, bam_file)
     }
     .set { samples }
 
@@ -35,6 +38,8 @@ process fastQC {
     publishDir("${params.report_dir}/${sampleID}", mode: "move")
 
     input:
+    // I don't like having to pass a filename in here to coerce nextflow
+    // into linking the file. I'll have to look for a better solution to this.
     tuple sampleID, filename, file("${filename}") from fastqc_input
 
     output:
@@ -190,7 +195,7 @@ process createSampleFile {
     publishDir("${params.report_dir}/samples/")
 
     input:
-    set samples, group_name, cell_lines, antigens, bamfiles, index_files from baal_file_ch
+    set runs, group_name, cell_lines, antigens, experiments, bedfiles, bamfiles, index_files from baal_file_ch
 
     output:
     file "${group_name}.tsv" into sample_files
@@ -200,16 +205,16 @@ process createSampleFile {
         output += "group_name\ttarget\treplicate_number\tbam_name\tbed_name\tsampleID\n"
         0.upto(samples.size()-1, {
             replicate = it + 1
-            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it].name}\tfake.bed\t${samples[it]}\n"
+            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it]}\t${bedfiles[it]}\t${samples[it]}\n"
         })
         output += "EOF\n"
         output
 }
 
 
-experiments_ch
-    .flatMap({tag, cell_line, transcription_factor, path -> file("${params.staging_root}/${path}/experiments/**/*.bed")})
-    .map({file ->
-        [ file.getParent().getName(), file ]
-    })
-    .set{ bed_ch }
+// experiments_ch
+//     .flatMap({tag, cell_line, transcription_factor, path -> file("${params.staging_root}/${path}/experiments/**/*.bed")})
+//     .map({file ->
+//         [ file.getParent().getName(), file ]
+//     })
+//     .set{ bed_ch }
