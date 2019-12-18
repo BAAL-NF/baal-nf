@@ -251,12 +251,16 @@ process baalProcessBams {
 }
 
 process baalGetASB {
-    scratch false
+    publishDir("${params.report_dir}/asb")
+
     label "baal_chip"
     label "mpi"
 
     input:
     set file("process_bams.rds"), file(snp_file) from get_asb_ch
+
+    output:
+    file "*.csv"
 
     script:
     """
