@@ -6,6 +6,7 @@ params.report_dir = "${workflow.launchDir}/test/reports/"
 params.genome = "hg19"
 params.picard_cmd = "picard"
 params.fastq_screen_conf = ""
+params.mpiflags = ""
 
 Channel
     .fromPath(params.experiments)
@@ -16,18 +17,19 @@ Channel
                         row.experiment,
                         row.run,
                         file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
-                        file("${params.staging_root}/${row.bed_file}"))})
+                        file("${params.staging_root}/${row.bed_file}"),
+                        file("${params.staging_root}/${row.snp_list}"))})
     .groupTuple()
-    .map({tag, cell_lines, transcription_factors, experiments, runs, fastq_files, bed_files ->
+    .map({tag, cell_lines, transcription_factors, experiments, runs, fastq_files, bed_files, snp_files ->
         num_samples = runs.size()
-        [ groupKey(tag, num_samples), cell_lines, transcription_factors, experiments, runs, fastq_files, bed_files ]
+        [ groupKey(tag, num_samples), cell_lines, transcription_factors, experiments, runs, fastq_files, bed_files, snp_files ]
     })
     .transpose()
     .transpose()
-    .fork { key, cell_line, transcription_factor, experiment, run, fastq_file, bam_file ->
+    .fork { key, cell_line, transcription_factor, experiment, run, fastq_file, bed_file, snp_file ->
         filename = fastq_file.name
         srr_ch: tuple(run, filename, fastq_file)
-        baal_ch: tuple(run, key, cell_line, transcription_factor, experiment, bam_file)
+        baal_ch: tuple(run, key, cell_line, transcription_factor, experiment, bed_file, snp_file)
     }
     .set { samples }
 
@@ -85,37 +87,37 @@ trim_galore_out.into {
     bowtie_input
 }
 
-process fastqScreen {
-    label 'fastq'
-    publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "*screen*")
+// process fastqScreen {
+//     label 'fastq'
+//     publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "*screen*")
 
-    input:
-    set sampleID, file(trimmed) from fastq_screen_input
+//     input:
+//     set sampleID, file(trimmed) from fastq_screen_input
 
-    output:
-    file trimmed into fastq_screen_out
-    file '*screen*'
+//     output:
+//     file trimmed into fastq_screen_out
+//     file '*screen*'
 
-    script:
-    optargs = ''
+//     script:
+//     optargs = ''
 
-    if (params.fastq_screen_conf != null && !params.fastq_screen_conf.isEmpty()){
-        optargs += "--conf ${params.fastq_screen_conf}"
-    }
+//     if (params.fastq_screen_conf != null && !params.fastq_screen_conf.isEmpty()){
+//         optargs += "--conf ${params.fastq_screen_conf}"
+//     }
 
-    switch (trimmed) {
-        case nextflow.processor.TaskPath:
-        return """fastq_screen ${optargs} ${trimmed}"""
+//     switch (trimmed) {
+//         case nextflow.processor.TaskPath:
+//         return """fastq_screen ${optargs} ${trimmed}"""
 
-        case nextflow.util.BlankSeparatedList:
-        return """fastq_screen ${optargs} --paired ${trimmed}"""
+//         case nextflow.util.BlankSeparatedList:
+//         return """fastq_screen ${optargs} --paired ${trimmed}"""
 
-        default:
-        println("Error getting files for sample ${sampleID}, exiting")
-        return "exit 1"
-    }
+//         default:
+//         println("Error getting files for sample ${sampleID}, exiting")
+//         return "exit 1"
+//     }
 
-}
+// }
 
 process align {
     label 'fastq'
@@ -189,32 +191,85 @@ process index {
 samples.baal_ch
     .join(indexed_bamfiles)
     .groupTuple(by: 1)
-    .into { baal_file_ch; baal_process_bams_ch }
+    .set { baal_file_ch }
 
 process createSampleFile {
-    publishDir("${params.report_dir}/samples/")
+    publishDir("test/reports/samples/")
 
     input:
-    set runs, group_name, cell_lines, antigens, experiments, bedfiles, bamfiles, index_files from baal_file_ch
+    set runs, group_name, cell_lines, antigens, experiments, bedfiles, snp_files, bamfiles, index_files from baal_file_ch
 
     output:
-    file "${group_name}.tsv" into sample_files
+    set runs, group_name, cell_lines, antigens, experiments, bedfiles, snp_files, bamfiles, index_files, file("${group_name}.tsv") into baal_sample_file_ch
 
     script:
         output = "cat << EOF > ${group_name}.tsv\n"
         output += "group_name\ttarget\treplicate_number\tbam_name\tbed_name\tsampleID\n"
-        0.upto(samples.size()-1, {
+        0.upto(runs.size()-1, {
             replicate = it + 1
-            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it]}\t${bedfiles[it]}\t${samples[it]}\n"
+            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it].name}\t${bedfiles[it].name}\t${runs[it]}\n"
         })
         output += "EOF\n"
         output
 }
 
+baal_sample_file_ch
+    .map({
+        runs, group_name, cell_lines, antigens, experiments, bedfiles, snp_files, bamfiles, index_files, sample_file ->
+        [runs, group_name, cell_lines, antigens, experiments, bedfiles.unique(), snp_files[0], bamfiles, index_files, sample_file]
+    })
+    .set { baal_process_bams_ch }
 
-// experiments_ch
-//     .flatMap({tag, cell_line, transcription_factor, path -> file("${params.staging_root}/${path}/experiments/**/*.bed")})
-//     .map({file ->
-//         [ file.getParent().getName(), file ]
-//     })
-//     .set{ bed_ch }
+process baalProcessBams {
+    label "baal_chip"
+
+    input:
+    set runs, group_name, cell_lines, antigens, experiments, file(bedfiles), file(snp_file), file(bamfiles), file(index_files), file(sample_file) from baal_process_bams_ch
+
+    output:
+    set file("process_bams.rds"), file(snp_file) into get_asb_ch
+
+    script:
+    """
+    #!/usr/bin/env Rscript
+    library(BaalChIP)
+
+    samplesheet <- "${sample_file}"
+
+    hets <- c("${group_name}" = "${snp_file}")
+
+    res <- new("BaalChIP", samplesheet=samplesheet, hets=hets)
+    res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=TRUE)
+    res <- QCfilter(res,
+                    RegionsToFilter=list("blacklist"=blacklist_hg19,
+                                         "highcoverage"=pickrell2011cov1_hg19),
+                    RegionsToKeep=list("UniqueMappability"=UniqueMappability50bp_hg19))
+    res <- mergePerGroup(res)
+    res <- filter1allele(res)
+    saveRDS(res, file="process_bams.rds")
+    """
+}
+
+process baalGetASB {
+    scratch false
+    label "baal_chip"
+    label "mpi"
+
+    input:
+    set file("process_bams.rds"), file(snp_file) from get_asb_ch
+
+    script:
+    """
+    #!/usr/bin/env mpirun -np 1 ${mpiflags} Rscript
+    library(BaalChIP)
+    # Read in hets from file
+    res <- readRDS("process_bams.rds")
+    res <- getASB(res, Iter=5000, conf_level=0.95)
+    saveRDS(res, "final.rds")
+    report <- BaalChIP.report(res)
+
+    for (group in names(report)) {
+            write.csv(report[[group]], paste(group,".csv", sep=""))
+    }
+    """
+}
