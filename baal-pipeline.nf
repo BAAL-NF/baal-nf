@@ -260,7 +260,7 @@ process baalGetASB {
 
     script:
     """
-    #!/usr/bin/env mpirun -np 1 ${mpiflags} Rscript
+    #!/usr/bin/env mpirun -np 1 ${params.mpiflags} Rscript
     library(BaalChIP)
     # Read in hets from file
     res <- readRDS("process_bams.rds")
