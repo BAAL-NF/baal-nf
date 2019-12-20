@@ -87,37 +87,37 @@ trim_galore_out.into {
     bowtie_input
 }
 
-// process fastqScreen {
-//     label 'fastq'
-//     publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "*screen*")
+process fastqScreen {
+    label 'fastq'
+    publishDir("${params.report_dir}/${sampleID}", mode: "move", pattern: "*screen*")
 
-//     input:
-//     set sampleID, file(trimmed) from fastq_screen_input
+    input:
+    set sampleID, file(trimmed) from fastq_screen_input
 
-//     output:
-//     file trimmed into fastq_screen_out
-//     file '*screen*'
+    output:
+    file trimmed into fastq_screen_out
+    file '*screen*'
 
-//     script:
-//     optargs = ''
+    script:
+    optargs = ''
 
-//     if (params.fastq_screen_conf != null && !params.fastq_screen_conf.isEmpty()){
-//         optargs += "--conf ${params.fastq_screen_conf}"
-//     }
+    if (params.fastq_screen_conf != null && !params.fastq_screen_conf.isEmpty()){
+        optargs += "--conf ${params.fastq_screen_conf}"
+    }
 
-//     switch (trimmed) {
-//         case nextflow.processor.TaskPath:
-//         return """fastq_screen ${optargs} ${trimmed}"""
+    switch (trimmed) {
+        case nextflow.processor.TaskPath:
+        return """fastq_screen ${optargs} ${trimmed}"""
 
-//         case nextflow.util.BlankSeparatedList:
-//         return """fastq_screen ${optargs} --paired ${trimmed}"""
+        case nextflow.util.BlankSeparatedList:
+        return """fastq_screen ${optargs} --paired ${trimmed}"""
 
-//         default:
-//         println("Error getting files for sample ${sampleID}, exiting")
-//         return "exit 1"
-//     }
+        default:
+        println("Error getting files for sample ${sampleID}, exiting")
+        return "exit 1"
+    }
 
-// }
+}
 
 process align {
     label 'fastq'
