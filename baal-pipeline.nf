@@ -1,4 +1,5 @@
 #!/usr/bin/env nextflow
+nextflow.preview.dsl=2
 
 params.staging_root = "${workflow.launchDir}/test/staging/runs"
 params.experiments = "${params.staging_root}/runs.csv"
@@ -11,22 +12,81 @@ params.fastqc_conf = ""
 
 // key: "${row.cell_line}_${row.transcription_factor}"
 
-Channel
-    .fromPath(params.experiments)
-    .splitCsv(header:true)
-    .map({row -> tuple(row.cell_line,
-                       row.transcription_factor,
-                       row.experiment,
-                       row.run,
-                       file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
-                       file("${params.staging_root}/${row.bed_file}"),
-                       file("${params.staging_root}/${row.snp_list}"))})
-    .fork{
-        cell_line, transcription_factor, experiment, run, fastq_files, bed_file, snp_file ->
-        fastq: tuple(run, fastq_files)
-        metadata: tuple(run, cell_line, transcription_factor, experiment, bed_file, snp_file)
+workflow filter_fastq_before {
+    include filter_fastq as pre_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf)
+    get:
+    fastq_list
+
+    main:
+    result = pre_filter_fastq(fastq_list, "before")
+
+    emit:
+    result
+}
+
+workflow filter_fastq_after {
+    include filter_fastq as post_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf)
+    get:
+    fastq_list
+
+    main:
+    result = post_filter_fastq(fastq_list, "after")
+
+    emit:
+    result
+}
+
+process trimGalore {
+    label 'fastq'
+    publishDir("${params.report_dir}/${run}", mode: "move", pattern: "*report*")
+
+    input:
+    tuple run, file(fastq_files)
+
+    output:
+    tuple run, file("${run}_tg*"), emit: trimmed_fastq
+    file '*report*'
+
+    script:
+    switch (fastq_files) {
+         case nextflow.processor.TaskPath:
+         return """trim_galore --basename ${run}_tg ${fastq_files}"""
+
+         case nextflow.util.BlankSeparatedList:
+         return """trim_galore --basename ${run}_tg --paired ${fastq_files}"""
+
+         default:
+         println("Error getting files for sample ${run}, exiting")
+         return "exit 1"
     }
-    .set{ srr_ch }
+}
+
+workflow {
+    include fastq_screen from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf)
+
+    Channel
+        .fromPath(params.experiments)
+        .splitCsv(header:true)
+        .map({row -> tuple(row.cell_line,
+                           row.transcription_factor,
+                           row.experiment,
+                           row.run,
+                           file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
+                           file("${params.staging_root}/${row.bed_file}"),
+                           file("${params.staging_root}/${row.snp_list}"))})
+        .fork{
+            cell_line, transcription_factor, experiment, run, fastq_files, bed_file, snp_file ->
+            fastq: tuple(run, fastq_files)
+            metadata: tuple(run, cell_line, transcription_factor, experiment, bed_file, snp_file)
+        }
+        .set{ srr_ch }
+
+    filter_fastq_before(srr_ch.fastq) | trimGalore
+    trimGalore.out.trimmed_fastq | filter_fastq_after & fastq_screen
+}
+
+
+
     // .set { fastqc_input_1 }
 //     .groupTuple()
 //     .map({tag, cell_lines, transcription_factors, experiments, runs, fastq_files, bed_files, snp_files ->
@@ -44,136 +104,120 @@ Channel
 
 // samples.srr_ch.into{ fastqc_input; for_trim_galore }
 
-process fastQCBefore {
-    label 'fastq'
-    publishDir("${params.report_dir}/${run}/before/", pattern: "*fastqc*",  mode: "copy")
+// process fastQCBefore {
+//     label 'fastq'
+//     publishDir("${params.report_dir}/${run}/before/", pattern: "*fastqc*",  mode: "copy")
 
-    input:
-    set run, file(fastq_files) from srr_ch.fastq
+//     input:
+//     set run, file(fastq_files) from srr_ch.fastq
 
-    output:
-    file "*_fastqc.html"
-    set file("*_fastqc.zip"), run, file(fastq_files) into fastqc_before_report
+//     output:
+//     file "*_fastqc.html"
+//     set file("*_fastqc.zip"), run, file(fastq_files) into fastqc_before_report
 
-    script:
-    config_args=""
+//     script:
+//     config_args=""
 
-    if (params.fastqc_conf) {
-        config_args += "-l ${params.fastqc_conf}"
-    }
+//     if (params.fastqc_conf) {
+//         config_args += "-l ${params.fastqc_conf}"
+//     }
 
-    """
-    fastqc ${config_args} ${fastq_files}
-    """
-}
+//     """
+//     fastqc ${config_args} ${fastq_files}
+//     """
+// }
 
-process getFastqcResult {
-    input:
-    set file(report_zip), run, fastq_files from fastqc_before_report
+// process getFastqcResult {
+//     input:
+//     set file(report_zip), run, fastq_files from fastqc_before_report
 
-    output:
-    set stdout, run, fastq_files into fastqc_before_out
+//     output:
+//     set stdout, run, fastq_files into fastqc_before_out
 
-    script:
-    script = ""
-    for (report_file in report_zip) {
-        script += """unzip ${report_file} ${report_file.baseName}/summary.txt >/dev/null
-                     cat ${report_file.baseName}/summary.txt | awk '/^FAIL/{print \"FAIL\"}' | uniq
-                  """
-    }
-    script
+//     script:
+//     script = ""
+//     for (report_file in report_zip) {
+//         script += """unzip ${report_file} ${report_file.baseName}/summary.txt >/dev/null
+//                      cat ${report_file.baseName}/summary.txt | awk '/^FAIL/{print \"FAIL\"}' | uniq
+//                   """
+//     }
+//     script
+// }
 
-}
+// fastqc_before_out
+//     .filter{ it[0].isEmpty() }
+//     .map{ it -> it[1..-1] }
+//     .set { trim_galore_input }
 
-fastqc_before_out
-    .filter{ it[0].isEmpty() }
-    .map{ it -> it[1..-1] }
-    .set { trim_galore_input }
+// def filter_fastqc = {
+//     input_ch, report_subdir ->
+//     fastQC(input_ch, report_subdir).
+//         getFastqcResult()
+//         .filter{ it[0].isEmpty() }
 
-process trimGalore {
-    label 'fastq'
-    publishDir("${params.report_dir}/${run}", mode: "move", pattern: "*report*")
+// }
 
-    input:
-    set run, file(fastq_files) from trim_galore_input
 
-    output:
-    set run, file("${run}_tg*") into trim_galore_out
-    file '*report*'
 
-    script:
-    switch (fastq_files) {
-         case nextflow.processor.TaskPath:
-         return """trim_galore --basename ${run}_tg ${fastq_files}"""
+// trim_galore_out.into {
+//     fastq_screen_input
+//     fastqc_input_after
+//     // bowtie_input
+// }
 
-         case nextflow.util.BlankSeparatedList:
-         return """trim_galore --basename ${run}_tg --paired ${fastq_files}"""
+// process fastQCAfter {
+//     label 'fastq'
+//     publishDir("${params.report_dir}/${run}/after/", pattern: "*fastqc*",  mode: "copy")
 
-         default:
-         println("Error getting files for sample ${run}, exiting")
-         return "exit 1"
-    }
-}
+//     input:
+//     set run, file(fastq_files) from fastqc_input_after
 
-trim_galore_out.into {
-    fastq_screen_input
-    fastqc_input_after
-    // bowtie_input
-}
+//     output:
+//     file "*_fastqc.html"
+//     set file("*_fastqc.zip"), run, file(fastq_files) into fastqc_report_after
 
-process fastQCAfter {
-    label 'fastq'
-    publishDir("${params.report_dir}/${run}/after/", pattern: "*fastqc*",  mode: "copy")
+//     script:
+//     config_args=""
 
-    input:
-    set run, file(fastq_files) from fastqc_input_after
+//     if (params.fastqc_conf) {
+//         config_args += "-l ${params.fastqc_conf}"
+//     }
 
-    output:
-    file "*_fastqc.html"
-    set file("*_fastqc.zip"), run, file(fastq_files) into fastqc_report_after
+//     """
+//     fastqc ${config_args} ${fastq_files}
+//     """
+// }
 
-    script:
-    config_args=""
+// process fastqScreen {
+//     label 'fastq'
+//     publishDir("${params.report_dir}/${run}", mode: "copy", pattern: "*screen*")
 
-    if (params.fastqc_conf) {
-        config_args += "-l ${params.fastqc_conf}"
-    }
+//     input:
+//     set run, file(trimmed) from fastq_screen_input
 
-    """
-    fastqc ${config_args} ${fastq_files}
-    """
-}
+//     output:
+//     set run, file("*screen.txt") into fastq_screen_out
+//     file '*screen*'
 
-process fastqScreen {
-    label 'fastq'
-    publishDir("${params.report_dir}/${run}", mode: "copy", pattern: "*screen*")
+//     script:
+//     optargs = ""
 
-    input:
-    set run, file(trimmed) from fastq_screen_input
+//     if (params.fastq_screen_conf){
+//         optargs += "--conf ${params.fastq_screen_conf}"
+//     }
 
-    output:
-    set run, file("*screen.txt") into fastq_screen_out
-    file '*screen*'
+//     switch (trimmed) {
+//         case nextflow.processor.TaskPath:
+//         return """fastq_screen ${optargs} ${trimmed}"""
 
-    script:
-    optargs = ''
+//         case nextflow.util.BlankSeparatedList:
+//         return """fastq_screen ${optargs} --paired ${trimmed}"""
 
-    if (params.fastq_screen_conf != null && !params.fastq_screen_conf.isEmpty()){
-        optargs += "--conf ${params.fastq_screen_conf}"
-    }
-
-    switch (trimmed) {
-        case nextflow.processor.TaskPath:
-        return """fastq_screen ${optargs} ${trimmed}"""
-
-        case nextflow.util.BlankSeparatedList:
-        return """fastq_screen ${optargs} --paired ${trimmed}"""
-
-        default:
-        println("Error getting files for sample ${run}, exiting")
-        return "exit 1"
-    }
-}
+//         default:
+//         println("Error getting files for sample ${run}, exiting")
+//         return "exit 1"
+//     }
+// }
 
 // process align {
 //     label 'fastq'
