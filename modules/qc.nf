@@ -124,7 +124,7 @@ workflow fastq_screen {
 
     main:
     screen = fastqScreen(fastq_ch)
-    result = getFastqScreenResult(screen.screening_result) | filter { it[1].strip() == "pass" } | map { it -> it [0] }
+    result = getFastqScreenResult(screen.screening_result) | filter { it[1] =~ /pass/ } | map { it -> it [0] }
 
     emit:
     result
