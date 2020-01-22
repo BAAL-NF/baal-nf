@@ -10,8 +10,6 @@ params.mpiflags = ""
 params.fastqc_conf = ""
 params.fastq_screen_conf = ""
 
-// key: "${row.cell_line}_${row.transcription_factor}"
-
 workflow filter_fastq_before {
     include filter_fastq as pre_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf)
     get:
@@ -42,7 +40,7 @@ workflow filter_fastq_after {
 
 workflow {
     include "./modules/fastq.nf" params(genome: params.genome, report_dir: params.report_dir, picard_cmd: params.picard_cmd)
-    include "./modules/baal.nf" params(report_dir: params.report_dir)
+    include "./modules/baal.nf" params(report_dir: params.report_dir, mpiflags: params.mpiflags)
 
     Channel
         .fromPath(params.experiments)
