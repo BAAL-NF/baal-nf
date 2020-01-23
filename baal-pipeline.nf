@@ -1,14 +1,14 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
-params.staging_root = "${workflow.launchDir}/test/staging/runs"
+params.staging_root = "${workflow.projectDir}/test/staging/runs"
 params.experiments = "${params.staging_root}/runs.csv"
-params.report_dir = "${workflow.launchDir}/test/reports/"
+params.report_dir = "${workflow.projectDir}/test/reports/"
 params.genome = "hg19"
 params.picard_cmd = "picard"
 params.mpiflags = ""
-params.fastqc_conf_pre = ""
-params.fastqc_conf_post = ""
+params.fastqc_conf_pre = "${workflow.projectDir}/data/before_limits.txt"
+params.fastqc_conf_post = "${workflow.projectDir}/data/after_limits.txt"
 params.fastq_screen_conf = ""
 
 // key: "${row.cell_line}_${row.transcription_factor}"
