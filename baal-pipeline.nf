@@ -7,13 +7,14 @@ params.report_dir = "${workflow.launchDir}/test/reports/"
 params.genome = "hg19"
 params.picard_cmd = "picard"
 params.mpiflags = ""
-params.fastqc_conf = ""
+params.fastqc_conf_pre = ""
+params.fastqc_conf_post = ""
 params.fastq_screen_conf = ""
 
 // key: "${row.cell_line}_${row.transcription_factor}"
 
 workflow filter_fastq_before {
-    include filter_fastq as pre_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf)
+    include filter_fastq as pre_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_pre)
     get:
     fastq_list
 
@@ -25,7 +26,7 @@ workflow filter_fastq_before {
 }
 
 workflow filter_fastq_after {
-    include filter_fastq as post_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf)
+    include filter_fastq as post_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_post)
     include fastq_screen from "./modules/qc.nf" params(fastq_screen_conf: params.fastq_screen_conf)
 
     get:
