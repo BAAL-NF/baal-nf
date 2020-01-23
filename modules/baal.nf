@@ -1,4 +1,5 @@
 params.report_dir = "${workflow.launchDir}/test/reports/"
+params.mpiflags = ""
 
 // This is objectively a horrible way to write to a file, and feels silly.
 // I haven't found a better way to do it because nextflow doesn't give access to the working directory
