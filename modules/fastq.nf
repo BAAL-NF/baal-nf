@@ -27,60 +27,40 @@ process trimGalore {
     }
 }
 
-process align {
+process createBam {
     label 'fastq'
     label 'bigmem'
+    publishDir("${params.report_dir}/${run}", mode: "move", pattern: "**.metrics")
 
     input:
     tuple run, file(trimmed)
 
     output:
-    tuple run, file("${run}.sam")
+    tuple run, file("${run}_dedup.bam"), emit: bamfile
+    file("**.metrics")
 
     script:
+    result = ""
     switch (trimmed) {
         case nextflow.processor.TaskPath:
-        return """bowtie2 -x ${params.genome} -U ${trimmed} -S ${run}.sam"""
+        result += """bowtie2 -x ${params.genome} -U ${trimmed} -S ${run}.sam\n"""
+        break
 
         case nextflow.util.BlankSeparatedList:
         first = trimmed[0]
         second = trimmed[1]
-        return """bowtie2 -x ${params.genome} -1 ${first} -2 ${second} -S ${run}.sam"""
+        result += """bowtie2 -x ${params.genome} -1 ${first} -2 ${second} -S ${run}.sam\n"""
+        break
 
         default:
         println("Error getting files for sample ${run}, exiting")
         return "exit 1"
     }
-}
-
-process sortAndCompress {
-    label 'fastq'
-    input:
-    tuple run, file(samfile)
-
-    output:
-    tuple run, file("${samfile.baseName}.bam")
-
+    result += """samtools sort ${run}.sam -o ${run}.sam.sorted
+    samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
+    ${params.picard_cmd} MarkDuplicates I="${run}.bam" O="${run}_dedup.bam" M="${run}.metrics"
     """
-    samtools sort ${samfile} -o ${samfile}.sorted
-    samtools view -h -S -b ${samfile}.sorted > ${samfile.baseName}.bam
-    """
-}
 
-process markDuplicates {
-    label 'fastq'
-    publishDir("${params.report_dir}/${run}", mode: "move", pattern: "**.metrics")
-
-    input:
-    tuple run, file(bamfile)
-
-    output:
-    tuple run, file("${bamfile.baseName}_dedup.bam"), emit: bam_files
-    file "${bamfile.baseName}.metrics"
-
-    """
-    ${params.picard_cmd} MarkDuplicates I="${bamfile}" O="${bamfile.baseName}_dedup.bam" M="${bamfile.baseName}.metrics"
-    """
 }
 
 process index {
@@ -101,8 +81,8 @@ workflow create_bam {
     fastq_files
 
     main:
-    fastq_files | align | sortAndCompress | markDuplicates
-    markDuplicates.out.bam_files | index
+    fastq_files | createBam
+    createBam.out.bamfile | index
 
     emit:
     index.out
