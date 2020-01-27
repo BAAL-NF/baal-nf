@@ -55,10 +55,13 @@ process baalProcessBams {
 }
 
 process baalGetASB {
-    publishDir("${params.report_dir}/asb")
+    publishDir("${params.report_dir}/asb", mode: "copy")
+    errorStrategy "retry"
+    maxRetries 3
 
     label "baal_chip"
     label "mpi"
+    label "bigmem"
 
     input:
     tuple file("process_bams.rds"), file(snp_file)
