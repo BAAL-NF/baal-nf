@@ -4,14 +4,13 @@ params.picard_cmd = "picard"
 
 process trimGalore {
     label 'fastq'
-    publishDir("${params.report_dir}/${run}", mode: "move", pattern: "*report*")
 
     input:
     tuple run, file(fastq_files)
 
     output:
     tuple run, file("${run}_tg*"), emit: trimmed_fastq
-    file '*report*'
+    tuple run, file('*report*'), emit: report
 
     script:
     switch (fastq_files) {
@@ -30,14 +29,13 @@ process trimGalore {
 process createBam {
     label 'fastq'
     label 'bigmem'
-    publishDir("${params.report_dir}/${run}", mode: "move", pattern: "**.metrics")
 
     input:
     tuple run, file(trimmed)
 
     output:
     tuple run, file("${run}_dedup.bam"), emit: bamfile
-    file("**.metrics")
+    tuple run, file("**.metrics"), emit: report
 
     script:
     result = ""
@@ -85,5 +83,6 @@ workflow create_bam {
     createBam.out.bamfile | index
 
     emit:
-    index.out
+    bamfile = index.out
+    report = createBam.out.report
 }
