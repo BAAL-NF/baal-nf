@@ -4,7 +4,6 @@ params.picard_cmd = "picard"
 
 process trimGalore {
     label 'fastq'
-    // publishDir("${params.report_dir}/${run}", mode: "move", pattern: "*report*")
 
     input:
     tuple run, file(fastq_files)
