@@ -17,10 +17,11 @@ workflow filter_fastq_before {
     fastq_list
 
     main:
-    result = pre_filter_fastq(fastq_list, "before")
+    pre_filter_fastq(fastq_list)
 
     emit:
-    result
+    result = pre_filter_fastq.out.fastq_list
+    report = pre_filter_fastq.out.report
 }
 
 workflow filter_fastq_after {
@@ -31,17 +32,24 @@ workflow filter_fastq_after {
     fastq_list
 
     main:
-    post_filter_fastq(fastq_list, "after")
+    post_filter_fastq(fastq_list)
     fastq_list | fastq_screen
-    result = post_filter_fastq.out.join(fastq_screen.out)
+
+    result = post_filter_fastq.out.fastq_list.join(fastq_screen.out.result)
+    report = post_filter_fastq.out.report
+                .mix(fastq_screen.out.report)
+                .groupTuple()
+                .map { key, files -> [key, files.flatten() ] }
 
     emit:
-    result
+    result = result
+    report = report
 }
 
 workflow {
     include "./modules/fastq.nf" params(genome: params.genome, report_dir: params.report_dir, picard_cmd: params.picard_cmd)
     include "./modules/baal.nf" params(report_dir: params.report_dir, mpiflags: params.mpiflags)
+    include multi_qc from "./modules/qc.nf"  params(report_dir: params.report_dir)
 
     Channel
         .fromPath(params.experiments)
@@ -60,11 +68,16 @@ workflow {
         }
         .set { srr_ch }
 
-    filter_fastq_before(srr_ch.fastq) | trimGalore
+    filter_fastq_before(srr_ch.fastq)
+
+    trimGalore(filter_fastq_before.out.result)
     trimGalore.out.trimmed_fastq | filter_fastq_after
+
+    multi_qc(srr_ch.metadata, filter_fastq_after.out.report)
+
     // Once filtering is done, we should be able to count the  number of fastq
     // files that will actually go into our analysis
-    srr_ch.metadata.join(filter_fastq_after.out)
+    srr_ch.metadata.join(filter_fastq_after.out.result)
         .groupTuple(by: 1)
         .map({ runs, tag, transcription_factor, experiments, bed_files, snp_files, fastq_files ->
             num_samples = runs.size()

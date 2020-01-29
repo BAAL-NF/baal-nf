@@ -5,11 +5,9 @@ params.max_acceptable_unmapped = 90
 
 process fastQC {
     label 'fastq'
-    publishDir("${params.report_dir}/${run}/${report_subdir}", pattern: "*fastqc*",  mode: "copy")
 
     input:
     tuple run, file(fastq_files)
-    val report_subdir
 
     output:
     tuple file("*_fastqc.zip"), file("*_fastqc.html"), run, file(fastq_files)
@@ -49,26 +47,29 @@ process getFastqcResult {
 workflow filter_fastq {
     get:
     fastq_list
-    report_subdir
 
     main:
-    result = fastQC(fastq_list, report_subdir) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
+    result = fastQC(fastq_list) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
+
+    report = fastQC.out.map {
+        zip, html, run, fastq_files -> [run, [zip, html].flatten()]
+    }
 
     emit:
-    result
+      fastq_list = result
+      report = report
 }
 
 
 process fastqScreen {
     label 'fastq'
-    publishDir("${params.report_dir}/${run}", mode: "copy", pattern: "*screen*")
 
     input:
     tuple run, file(trimmed)
 
     output:
     tuple run, file("*screen.txt"), emit: screening_result
-    file '*screen*'
+    tuple run, file('*screen*'), emit: report
 
     script:
     options = []
@@ -127,5 +128,40 @@ workflow fastq_screen {
     result = getFastqScreenResult(screen.screening_result) | filter { it[1] =~ /pass/ } | map { it -> it [0] }
 
     emit:
-    result
+    result = result
+    report = screen.report
+}
+
+
+process multiQC {
+    publishDir("${params.report_dir}/multiQC/${key}", mode: "move")
+
+    label "fastq"
+    input:
+    tuple key, file(results)
+
+    output:
+    file("multiqc_*")
+
+    script:
+    """
+    multiqc ${results}
+    """
+}
+
+workflow multi_qc {
+    get:
+    metadata
+    report
+
+    main:
+    metadata
+        .join(report)
+        .groupTuple(by: 1)
+        .map {
+            run, group, transcription_factor, experiment, bed_file, snp_file, reports -> [group, reports.flatten()]
+        } | multiQC
+
+    emit:
+    multiQC.out
 }
