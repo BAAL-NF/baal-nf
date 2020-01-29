@@ -160,7 +160,7 @@ workflow multi_qc {
         .groupTuple(by: 1)
         .map {
             run, group, transcription_factor, experiment, bed_file, snp_file, reports -> [group, reports.flatten()]
-        } | view | multiQC
+        } | multiQC
 
     emit:
     multiQC.out

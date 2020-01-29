@@ -95,5 +95,5 @@ workflow {
     bam_files = filtered_data.metadata
                 .join(create_bam.out)
                 .groupTuple(by: 1)
-    bam_files //| run_baal
+    bam_files | run_baal
 }
