@@ -38,8 +38,6 @@ workflow filter_fastq_after {
     result = post_filter_fastq.out.fastq_list.join(fastq_screen.out.result)
     report = post_filter_fastq.out.report
                 .mix(fastq_screen.out.report)
-                .groupTuple()
-                .map { key, files -> [key, files.flatten() ] }
 
     emit:
     result = result
@@ -71,9 +69,7 @@ workflow {
     filter_fastq_before(srr_ch.fastq)
 
     trimGalore(filter_fastq_before.out.result)
-    trimGalore.out.trimmed_fastq | filter_fastq_after
-
-    multi_qc(srr_ch.metadata, filter_fastq_after.out.report)
+    filter_fastq_after(trimGalore.out.trimmed_fastq)
 
     // Once filtering is done, we should be able to count the  number of fastq
     // files that will actually go into our analysis
@@ -92,8 +88,20 @@ workflow {
         .set { filtered_data }
 
     filtered_data.fastq | create_bam
+
+
+    // Generate multiQC reports per TF/Cell line group.
+    reports = filter_fastq_after.out.report
+                .mix(trimGalore.out.report)
+                .mix(create_bam.out.report)
+                .groupTuple()
+                .map { key, files -> [key, files.flatten() ] }
+
+    multi_qc(srr_ch.metadata, reports)
+
+
     bam_files = filtered_data.metadata
-                .join(create_bam.out)
+                .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
     bam_files | run_baal
 }
