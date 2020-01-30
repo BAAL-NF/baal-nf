@@ -62,7 +62,7 @@ workflow count_fastq {
 
     emit:
     fastq = filtered_data.fastq
-    metadata = metadata.fastq
+    metadata =  filtered_data.metadata
 }
 
 // Filtering stages. These are done before and after TrimGalore.
@@ -109,7 +109,7 @@ workflow {
     import_samples()
 
     // Pre-trimming filtering step
-    filter_fastq_before(import_samples.fastq)
+    filter_fastq_before(import_samples.out.fastq)
 
     // Adapter trimming
     trimGalore(filter_fastq_before.out.result)
@@ -119,10 +119,10 @@ workflow {
 
     // Once filtering is done, we should be able to count the  number of fastq
     // files that will actually go into our analysis
-    count_fastq(import_samples.metadata, filter_fastq_after.out.result)
+    count_fastq(import_samples.out.metadata, filter_fastq_after.out.result)
 
     // Create BAM files for each SRR
-    count_fastq.fastq | create_bam
+    count_fastq.out.fastq | create_bam
 
     // Generate multiQC reports per TF/Cell line group.
     reports = filter_fastq_after.out.report
@@ -131,10 +131,10 @@ workflow {
                 .groupTuple()
                 .map { key, files -> [key, files.flatten() ] }
 
-    multi_qc(import_samples.metadata, reports)
+    multi_qc(import_samples.out.metadata, reports)
 
     // Regroup the bam files with their associated metadata and run baal chip
-    bam_files = count_fastq.metadata
+    bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
     bam_files | run_baal
