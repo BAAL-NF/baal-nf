@@ -11,6 +11,61 @@ params.fastqc_conf_pre = "${workflow.projectDir}/data/before_limits.txt"
 params.fastqc_conf_post = "${workflow.projectDir}/data/after_limits.txt"
 params.fastq_screen_conf = ""
 
+// Import a CSV file with all sample identifiers
+workflow import_samples {
+    main:
+    Channel
+        .fromPath(params.experiments)
+        .splitCsv(header:true)
+        .map({row -> tuple(row.run,
+                "${row.cell_line}_${row.transcription_factor}",
+                row.transcription_factor,
+                row.experiment,
+                file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
+                file("${params.staging_root}/${row.bed_file}"),
+                file("${params.staging_root}/${row.snp_list}"))})
+        .fork {
+            run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
+            fastq: [run, fastq_files]
+            metadata: [run, group, transcription_factor, experiment, bed_file, snp_file]
+        }
+        .set{ srr_ch }
+
+
+    emit:
+    fastq = srr_ch.fastq
+    metadata = srr_ch.metadata
+}
+
+// Count fastq files that have made it through filtering, create a group key, and separate out the fastq files
+// into their own channel for the sake of further processing.
+workflow count_fastq {
+    get:
+    metadata
+    fastq_files
+
+    main:
+    metadata
+        .join(fastq_files)
+        .groupTuple(by: 1)
+        .map({ runs, tag, transcription_factor, experiments, bed_files, snp_files, fastq_files ->
+            num_samples = runs.size()
+            [ runs, groupKey(tag, num_samples), transcription_factor, experiments, bed_files, snp_files, fastq_files ]
+        })
+        .transpose()
+        .fork {
+          run, key, transcription_factor, experiment, bed_file, snp_file, fastq_files ->
+          fastq: [ run, fastq_files ]
+          metadata: [ run, key, transcription_factor, experiment, bed_file, snp_file ]
+        }
+        .set { filtered_data }
+
+    emit:
+    fastq = filtered_data.fastq
+    metadata = metadata.fastq
+}
+
+// Filtering stages. These are done before and after TrimGalore.
 workflow filter_fastq_before {
     include filter_fastq as pre_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_pre)
     get:
@@ -24,6 +79,7 @@ workflow filter_fastq_before {
     report = pre_filter_fastq.out.report
 }
 
+// After TrimGalore we also run FastQ-screen to check for contamination
 workflow filter_fastq_after {
     include filter_fastq as post_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_post)
     include fastq_screen from "./modules/qc.nf" params(fastq_screen_conf: params.fastq_screen_conf)
@@ -49,46 +105,24 @@ workflow {
     include "./modules/baal.nf" params(report_dir: params.report_dir, mpiflags: params.mpiflags)
     include multi_qc from "./modules/qc.nf"  params(report_dir: params.report_dir)
 
-    Channel
-        .fromPath(params.experiments)
-        .splitCsv(header:true)
-        .map({row -> tuple(row.run,
-                           "${row.cell_line}_${row.transcription_factor}",
-                           row.transcription_factor,
-                           row.experiment,
-                           file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
-                           file("${params.staging_root}/${row.bed_file}"),
-                           file("${params.staging_root}/${row.snp_list}"))})
-        .fork {
-            run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
-            fastq: [run, fastq_files]
-            metadata: [run, group, transcription_factor, experiment, bed_file, snp_file]
-        }
-        .set { srr_ch }
+    // Load CSV file
+    import_samples()
 
-    filter_fastq_before(srr_ch.fastq)
+    // Pre-trimming filtering step
+    filter_fastq_before(import_samples.fastq)
 
+    // Adapter trimming
     trimGalore(filter_fastq_before.out.result)
+
+    // Rerun fastQC and fastqScreen
     filter_fastq_after(trimGalore.out.trimmed_fastq)
 
     // Once filtering is done, we should be able to count the  number of fastq
     // files that will actually go into our analysis
-    srr_ch.metadata.join(filter_fastq_after.out.result)
-        .groupTuple(by: 1)
-        .map({ runs, tag, transcription_factor, experiments, bed_files, snp_files, fastq_files ->
-            num_samples = runs.size()
-            [ runs, groupKey(tag, num_samples), transcription_factor, experiments, bed_files, snp_files, fastq_files ]
-        })
-        .transpose()
-        .fork {
-          run, key, transcription_factor, experiment, bed_file, snp_file, fastq_files ->
-          fastq: [ run, fastq_files ]
-          metadata: [ run, key, transcription_factor, experiment, bed_file, snp_file ]
-        }
-        .set { filtered_data }
+    count_fastq(import_samples.metadata, filter_fastq_after.out.result)
 
-    filtered_data.fastq | create_bam
-
+    // Create BAM files for each SRR
+    count_fastq.fastq | create_bam
 
     // Generate multiQC reports per TF/Cell line group.
     reports = filter_fastq_after.out.report
@@ -97,10 +131,10 @@ workflow {
                 .groupTuple()
                 .map { key, files -> [key, files.flatten() ] }
 
-    multi_qc(srr_ch.metadata, reports)
+    multi_qc(import_samples.metadata, reports)
 
-
-    bam_files = filtered_data.metadata
+    // Regroup the bam files with their associated metadata and run baal chip
+    bam_files = count_fastq.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
     bam_files | run_baal
