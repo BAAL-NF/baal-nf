@@ -5,7 +5,7 @@ params.mpiflags = ""
 // I haven't found a better way to do it because nextflow doesn't give access to the working directory
 // when you run an exec command
 process createSampleFile {
-    publishDir("${params.report_dir}/samples/")
+    publishDir("${params.report_dir}/samples/", mode:"copy")
 
     input:
     tuple runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files
