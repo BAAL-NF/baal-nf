@@ -100,6 +100,19 @@ workflow filter_fastq_after {
     report = report
 }
 
+process reportFastQC {
+    publishDir("${params.report_dir}/preFastQC/${key}/", mode: "copy")
+
+    input:
+    tuple key, file(reports)
+
+    output:
+    file reports
+
+    script:
+    "exit 0"
+}
+
 workflow {
     include "./modules/fastq.nf" params(genome: params.genome, report_dir: params.report_dir, picard_cmd: params.picard_cmd)
     include "./modules/baal.nf" params(report_dir: params.report_dir, mpiflags: params.mpiflags)
@@ -110,6 +123,11 @@ workflow {
 
     // Pre-trimming filtering step
     filter_fastq_before(import_samples.out.fastq)
+
+    import_samples.out.metadata
+        .join(filter_fastq_before.out.report)
+        .groupTuple(by:1)
+        .map{run, group, transcription_factor, experiment, bed_file, snp_file, reports -> [group, reports.flatten()]} | view | reportFastQC
 
     // Adapter trimming
     trimGalore(filter_fastq_before.out.result)
@@ -137,5 +155,5 @@ workflow {
     bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
-    bam_files | run_baal
+    bam_files //| run_baal
 }
