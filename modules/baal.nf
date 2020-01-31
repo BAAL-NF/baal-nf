@@ -56,8 +56,7 @@ process baalProcessBams {
 
 process baalGetASB {
     publishDir("${params.report_dir}/asb", mode: "copy")
-    errorStrategy "retry"
-    maxRetries 3
+    errorStrategy { (task.attempt < 5) ? "retry" : "ignore"}
 
     label "baal_chip"
     label "mpi"
