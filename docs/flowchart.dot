@@ -1,0 +1,206 @@
+digraph "flowchart" {
+p0 [shape=point,label="",fixedsize=true,width=0.1,xlabel="Channel.fromPath"];
+p1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="splitCsv"];
+p0 -> p1;
+
+p1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="splitCsv"];
+p2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p1 -> p2;
+
+p2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p3 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="fork"];
+p2 -> p3;
+
+p3 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="fork"];
+p24 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p3 -> p24 [label="metadata"];
+
+p3 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="fork"];
+p4 [label="filter_fastq_before:pre_filter_fastq:fastQC"];
+p3 -> p4 [label="fastq_list"];
+
+p4 [label="filter_fastq_before:pre_filter_fastq:fastQC"];
+p5 [label="filter_fastq_before:pre_filter_fastq:getFastqcResult"];
+p4 -> p5;
+
+p5 [label="filter_fastq_before:pre_filter_fastq:getFastqcResult"];
+p6 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="filter"];
+p5 -> p6;
+
+p6 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="filter"];
+p7 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p6 -> p7;
+
+p7 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p10 [label="trimGalore"];
+p7 -> p10 [label="result"];
+
+p4 [label="filter_fastq_before:pre_filter_fastq:fastQC"];
+p8 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p4 -> p8;
+
+p8 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p9 [shape=point];
+p8 -> p9 [label="report"];
+
+p10 [label="trimGalore"];
+p11 [label="filter_fastq_after:post_filter_fastq:fastQC"];
+p10 -> p11 [label="fastq_ch"];
+
+p10 [label="trimGalore"];
+p32 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p10 -> p32;
+
+p11 [label="filter_fastq_after:post_filter_fastq:fastQC"];
+p12 [label="filter_fastq_after:post_filter_fastq:getFastqcResult"];
+p11 -> p12;
+
+p12 [label="filter_fastq_after:post_filter_fastq:getFastqcResult"];
+p13 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="filter"];
+p12 -> p13;
+
+p13 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="filter"];
+p14 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p13 -> p14;
+
+p14 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p21 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p14 -> p21 [label="fastq_list"];
+
+p11 [label="filter_fastq_after:post_filter_fastq:fastQC"];
+p15 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p11 -> p15;
+
+p15 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p23 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p15 -> p23 [label="report"];
+
+p10 [label="trimGalore"];
+p16 [label="filter_fastq_after:fastq_screen:fastqScreen"];
+p10 -> p16 [label="fastq_ch"];
+
+p16 [label="filter_fastq_after:fastq_screen:fastqScreen"];
+p17 [label="filter_fastq_after:fastq_screen:getFastqScreenResult"];
+p16 -> p17;
+
+p16 [label="filter_fastq_after:fastq_screen:fastqScreen"];
+p23 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p16 -> p23 [label="report"];
+
+p17 [label="filter_fastq_after:fastq_screen:getFastqScreenResult"];
+p18 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="filter"];
+p17 -> p18;
+
+p18 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="filter"];
+p19 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p18 -> p19;
+
+p19 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p20 [shape=point];
+p19 -> p20 [label="result"];
+
+p21 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p22 [shape=point];
+p21 -> p22 [label="fastq_files"];
+
+p23 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p32 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p23 -> p32 [label="report"];
+
+p24 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p25 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p24 -> p25;
+
+p25 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p26 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p25 -> p26;
+
+p26 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p27 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="transpose"];
+p26 -> p27;
+
+p27 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="transpose"];
+p28 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="fork"];
+p27 -> p28;
+
+p28 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="fork"];
+p42 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p28 -> p42 [label="metadata"];
+
+p28 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="fork"];
+p29 [label="create_bam:createBam"];
+p28 -> p29 [label="fastq_files"];
+
+p29 [label="create_bam:createBam"];
+p30 [label="create_bam:index"];
+p29 -> p30;
+
+p29 [label="create_bam:createBam"];
+p33 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p29 -> p33 [label="report"];
+
+p30 [label="create_bam:index"];
+p31 [shape=point];
+p30 -> p31;
+
+p32 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p33 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p32 -> p33;
+
+p33 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="mix"];
+p34 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p33 -> p34;
+
+p34 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p35 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p34 -> p35;
+
+p35 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p36 [shape=point];
+p35 -> p36 [label="report"];
+
+p3 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="fork"];
+p37 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p3 -> p37 [label="metadata"];
+
+p37 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p38 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p37 -> p38;
+
+p38 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p39 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p38 -> p39;
+
+p39 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p40 [label="multi_qc:multiQC"];
+p39 -> p40;
+
+p40 [label="multi_qc:multiQC"];
+p41 [shape=point];
+p40 -> p41;
+
+p42 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="join"];
+p43 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p42 -> p43;
+
+p43 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="groupTuple"];
+p44 [label="run_baal:createSampleFile"];
+p43 -> p44 [label="baal_groups"];
+
+p44 [label="run_baal:createSampleFile"];
+p45 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p44 -> p45;
+
+p45 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="map"];
+p46 [label="run_baal:baalProcessBams"];
+p45 -> p46 [label="sample_files"];
+
+p46 [label="run_baal:baalProcessBams"];
+p47 [label="run_baal:baalGetASB"];
+p46 -> p47;
+
+p47 [label="run_baal:baalGetASB"];
+p48 [shape=point];
+p47 -> p48;
+
+}
