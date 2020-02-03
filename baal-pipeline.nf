@@ -127,7 +127,7 @@ workflow {
     import_samples.out.metadata
         .join(filter_fastq_before.out.report)
         .groupTuple(by:1)
-        .map{run, group, transcription_factor, experiment, bed_file, snp_file, reports -> [group, reports.flatten()]} | view | reportFastQC
+        .map{run, group, transcription_factor, experiment, bed_file, snp_file, reports -> [group, reports.flatten()]} | reportFastQC
 
     // Adapter trimming
     trimGalore(filter_fastq_before.out.result)
@@ -155,5 +155,5 @@ workflow {
     bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
-    bam_files //| run_baal
+    bam_files | run_baal
 }
