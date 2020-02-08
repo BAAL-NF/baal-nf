@@ -10,6 +10,7 @@ params.mpiflags = ""
 params.fastqc_conf_pre = "${workflow.projectDir}/data/before_limits.txt"
 params.fastqc_conf_post = "${workflow.projectDir}/data/after_limits.txt"
 params.fastq_screen_conf = ""
+params.run_baal = true
 
 // Import a CSV file with all sample identifiers
 workflow import_samples {
@@ -155,5 +156,7 @@ workflow {
     bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
-    bam_files | run_baal
+    if (params.run_baal) {
+        bam_files | run_baal
+    }
 }

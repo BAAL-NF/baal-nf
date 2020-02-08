@@ -13,17 +13,22 @@ process trimGalore {
     tuple run, file('*report*'), emit: report
 
     script:
-    switch (fastq_files) {
-         case nextflow.processor.TaskPath:
-         return """trim_galore --basename ${run}_tg ${fastq_files}"""
+    """
+    FILES=(${fastq_files})
+    case \${#FILES[@]} in
+        1)
+        trim_galore --basename ${run}_tg \${FILES[0]}
+        ;;
 
-         case nextflow.util.BlankSeparatedList:
-         return """trim_galore --basename ${run}_tg --paired ${fastq_files}"""
+        2)
+        trim_galore --basename ${run}_tg --paired \${FILES[0]} \${FILES[1]}
+        ;;
 
-         default:
-         println("Error getting files for sample ${run}, exiting")
-         return "exit 1"
-    }
+        *)
+        echo "Error getting files for sample ${run}, exiting"
+        exit 1
+    esac
+    """
 }
 
 process createBam {
@@ -38,23 +43,24 @@ process createBam {
     tuple run, file("**.metrics"), emit: report
 
     script:
-    result = ""
-    switch (trimmed) {
-        case nextflow.processor.TaskPath:
-        result += """bowtie2 -x ${params.genome} -U ${trimmed} -S ${run}.sam\n"""
-        break
+    // I hate the fact that I have to fall back on bash to check the length of this list.
+    """
+    FILES=(${trimmed})
+    case \${#FILES[@]} in
+        1)
+        bowtie2 -x ${params.genome} -U \${FILES[0]} -S ${run}.sam\n
+        ;;
 
-        case nextflow.util.BlankSeparatedList:
-        first = trimmed[0]
-        second = trimmed[1]
-        result += """bowtie2 -x ${params.genome} -1 ${first} -2 ${second} -S ${run}.sam\n"""
-        break
+        2)
+        bowtie2 -x ${params.genome} -1 \${FILES[0]} -2 \${FILES[1]} -S ${run}.sam\n
+        ;;
 
-        default:
-        println("Error getting files for sample ${run}, exiting")
-        return "exit 1"
-    }
-    result += """samtools sort ${run}.sam -o ${run}.sam.sorted
+        *)
+        echo Error getting files for sample ${run}, exiting
+        exit 1
+    esac
+
+    samtools sort ${run}.sam -o ${run}.sam.sorted
     samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
     ${params.picard_cmd} MarkDuplicates I="${run}.bam" O="${run}_dedup.bam" M="${run}.metrics"
     """

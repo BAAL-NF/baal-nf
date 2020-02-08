@@ -79,17 +79,23 @@ process fastqScreen {
     }
     optargs = options.join(" ")
 
-    switch (trimmed) {
-        case nextflow.processor.TaskPath:
-        return """fastq_screen ${optargs} ${trimmed}"""
+    """
+    FILES=(${trimmed})
+    case \${#FILES[@]} in
 
-        case nextflow.util.BlankSeparatedList:
-        return """fastq_screen ${optargs} --paired ${trimmed}"""
+        1)
+        fastq_screen ${optargs} \${FILES[0]}
+        ;;
 
-        default:
-        println("Error getting files for sample ${run}, exiting")
-        return "exit 1"
-    }
+        2)
+        fastq_screen ${optargs} --paired \${FILES[0]} \${FILES[1]}
+        ;;
+
+        *)
+        echo "Error getting files for sample ${run}, exiting"
+        exit 1
+    esac
+    """
 }
 
 process getFastqScreenResult {
