@@ -156,6 +156,7 @@ workflow {
     bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
+
     if (params.run_baal) {
         bam_files | run_baal
     }
