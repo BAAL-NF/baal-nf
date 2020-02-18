@@ -38,6 +38,10 @@ process baalProcessBams {
     #!/usr/bin/env Rscript
     library(BaalChIP)
 
+    data(blacklist_hg19)
+    data(pickrell2011cov1_hg19)
+    data(UniqueMappability50bp_hg19)
+
     samplesheet <- "${sample_file}"
 
     hets <- c("${group_name}" = "${snp_file}")
