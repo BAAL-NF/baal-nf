@@ -22,6 +22,7 @@ process fastQC {
     config_cmd = config_args.join(" ")
 
     """
+    # FASTQC run ${run}
     fastqc ${config_cmd} ${fastq_files}
     """
 }
