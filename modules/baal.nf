@@ -26,6 +26,9 @@ process createSampleFile {
 
 process baalProcessBams {
     label "baal_chip"
+    label "retry_mem"
+
+    errorStrategy { (task.attempt < 3) ? "retry" : "ignore"}
 
     input:
     tuple group_name, file(bedfiles), file(snp_file), file(bamfiles), file(index_files), file(sample_file)

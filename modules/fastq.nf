@@ -34,6 +34,9 @@ process trimGalore {
 process createBam {
     label 'fastq'
     label 'bigmem'
+    
+    errorStrategy 'retry'
+    maxRetries 3
 
     input:
     tuple run, file(trimmed)
