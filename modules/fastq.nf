@@ -34,7 +34,9 @@ process trimGalore {
 process createBam {
     label 'fastq'
     label 'bigmem'
-    publishDir("${params.report_dir}/logs/bowtie2/", mode: copy, pattern: "${run}.log")
+    publishDir("${params.report_dir}/logs/bowtie2/", mode: copy, pattern: "${run}.log")    
+    errorStrategy 'retry'
+    maxRetries 3
 
     input:
     tuple run, file(trimmed)
