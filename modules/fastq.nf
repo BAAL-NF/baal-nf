@@ -51,11 +51,11 @@ process createBam {
     FILES=(${trimmed})
     case \${#FILES[@]} in
         1)
-        bowtie2 -x ${params.genome} -U \${FILES[0]} -S ${run}.sam | tee ${run}.log\n
+        bowtie2 -x ${params.genome} -U \${FILES[0]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
         ;;
 
         2)
-        bowtie2 -x ${params.genome} -1 \${FILES[0]} -2 \${FILES[1]} -S ${run}.sam | tee ${run}.log\n
+        bowtie2 -x ${params.genome} -1 \${FILES[0]} -2 \${FILES[1]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
         ;;
 
         *)
