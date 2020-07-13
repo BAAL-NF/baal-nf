@@ -44,6 +44,7 @@ process createBam {
     output:
     tuple run, file("${run}_dedup.bam"), emit: bamfile
     tuple run, file("**.metrics"), emit: report
+    file "${run}.log"
 
     script:
     // I hate the fact that I have to fall back on bash to check the length of this list.
