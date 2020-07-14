@@ -114,6 +114,21 @@ process reportFastQC {
     "exit 0"
 }
 
+process mergeBeds {
+     publishDir(params.out_dir, mode: "move")
+ 
+     input:
+     tuple runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files
+
+     output:
+     tuple runs, group_name, antigens, experiments, file("${group_name}.bed"), snp_files, bamfiles, index_files
+ 
+     script:
+     """
+     cat ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
+     """
+}
+
 workflow {
     include "./modules/fastq.nf" params(genome: params.genome, report_dir: params.report_dir, picard_cmd: params.picard_cmd)
     include "./modules/baal.nf" params(report_dir: params.report_dir, mpiflags: params.mpiflags)
@@ -156,6 +171,7 @@ workflow {
     bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
+		.mergeBeds()
 
     if (params.run_baal) {
         bam_files | run_baal

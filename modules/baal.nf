@@ -8,17 +8,17 @@ process createSampleFile {
     publishDir("${params.report_dir}/samples/", mode:"copy")
 
     input:
-    tuple runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files
+    tuple runs, group_name, antigens, experiments, bed_file, snp_files, bamfiles, index_files
 
     output:
-    tuple group_name, bedfiles, snp_files, bamfiles, index_files, file("${group_name}.tsv")
+    tuple group_name, bed_file, snp_files, bamfiles, index_files, file("${group_name}.tsv")
 
     script:
         output = "cat << EOF > ${group_name}.tsv\n"
         output += "group_name\ttarget\treplicate_number\tbam_name\tbed_name\tsampleID\n"
         0.upto(runs.size()-1, {
             replicate = it + 1
-            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it].name}\t${bedfiles[it].name}\t${runs[it]}\n"
+            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it].name}\t${bed_file.name}\t${runs[it]}\n"
         })
         output += "EOF\n"
         output
@@ -50,7 +50,7 @@ process baalProcessBams {
     hets <- c("${group_name}" = "${snp_file}")
 
     res <- new("BaalChIP", samplesheet=samplesheet, hets=hets)
-    res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=TRUE)
+    res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=FALSE)
     res <- QCfilter(res,
                     RegionsToFilter=list("blacklist"=blacklist_hg19,
                                          "highcoverage"=pickrell2011cov1_hg19),
