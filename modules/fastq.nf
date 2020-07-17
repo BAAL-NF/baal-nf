@@ -63,7 +63,7 @@ process createBam {
         echo Error getting files for sample ${run}, exiting
         exit 1
     esac
-
+    samtools view -H ${run}.sam
     samtools sort ${run}.sam -o ${run}.sam.sorted
     samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
     ${params.picard_cmd} MarkDuplicates I="${run}.bam" O="${run}_dedup.bam" M="${run}.metrics"

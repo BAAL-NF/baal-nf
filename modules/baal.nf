@@ -31,7 +31,7 @@ process baalProcessBams {
     errorStrategy { (task.attempt < 3) ? "retry" : "ignore"}
 
     input:
-    tuple group_name, file(bedfiles), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
+    tuple group_name, file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
 
     output:
     tuple file("process_bams.rds"), file(snp_file)
@@ -96,15 +96,8 @@ workflow run_baal {
     baal_groups
 
     main:
-    baal_groups | createSampleFile
-
-    sample_files = createSampleFile.out.map({
-        group_name, bedfiles, snp_files, bamfiles, index_files, sample_file ->
-        [group_name, bedfiles.unique(), snp_files.unique(), bamfiles, index_files, sample_file]
-    })
-
-    sample_files | baalProcessBams | baalGetASB
+    baal_groups | createSampleFile | baalProcessBams | baalGetASB
 
     emit:
-    baalProcessBams.out
+    baalGetASB.out
 }

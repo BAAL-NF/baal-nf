@@ -115,10 +115,11 @@ process reportFastQC {
 }
 
 process mergeBeds {
-     publishDir(params.out_dir, mode: "move")
+     publishDir("${params.report_dir}/bed_files/", mode: "copy")
+     label "fastq"
  
      input:
-     tuple runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files
+     tuple runs, group_name, antigens, experiments, file(bedfiles), snp_files, bamfiles, index_files
 
      output:
      tuple runs, group_name, antigens, experiments, file("${group_name}.bed"), snp_files, bamfiles, index_files
@@ -171,9 +172,12 @@ workflow {
     bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
-		.mergeBeds()
+		.map {
+                   runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files -> 
+		   [tuple runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
+		}
 
     if (params.run_baal) {
-        bam_files | run_baal
+        bam_files | mergeBeds | run_baal
     }
 }
