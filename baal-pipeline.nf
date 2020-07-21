@@ -174,7 +174,7 @@ workflow {
                 .groupTuple(by: 1)
 		.map {
                    runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files -> 
-		   [tuple runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
+		   [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
 		}
 
     if (params.run_baal) {
