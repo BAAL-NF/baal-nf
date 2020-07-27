@@ -34,7 +34,7 @@ process baalProcessBams {
     tuple group_name, file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
 
     output:
-    tuple file("process_bams.rds"), file(snp_file)
+    tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
 
     script:
     """
@@ -62,7 +62,6 @@ process baalProcessBams {
 }
 
 process baalGetASB {
-    publishDir("${params.report_dir}/asb", mode: "copy")
     errorStrategy { (task.attempt < 5) ? "retry" : "ignore"}
 
     label "baal_chip"
@@ -70,10 +69,10 @@ process baalGetASB {
     label "bigmem"
 
     input:
-    tuple file("process_bams.rds"), file(snp_file)
+    tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
 
     output:
-    file "*.csv"
+    tuple group_name, file("*.csv"), file(bed_file)
 
     script:
     """
@@ -88,6 +87,23 @@ process baalGetASB {
     for (group in names(report)) {
             write.csv(report[[group]], paste(group,".csv", sep=""))
     }
+    """
+}
+
+process overlapPeaks {
+    conda 'pyranges pandas'
+
+    publishDir("${params.report_dir}/asb", mode: "copy")
+
+    input:
+    tuple group_name, file(asb_file), file(bed_file)
+
+    output:
+    file("${group_name}.withPeaks.csv")
+
+    script:
+    """
+    python ${workflow.projectDir}/py/overlap_beds.py asb_file, 
     """
 }
 
