@@ -50,7 +50,7 @@ process baalProcessBams {
     hets <- c("${group_name}" = "${snp_file}")
 
     res <- new("BaalChIP", samplesheet=samplesheet, hets=hets)
-    res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=FALSE)
+    res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=TRUE)
     res <- QCfilter(res,
                     RegionsToFilter=list("blacklist"=blacklist_hg19,
                                          "highcoverage"=pickrell2011cov1_hg19),
