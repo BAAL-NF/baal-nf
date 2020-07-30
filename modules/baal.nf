@@ -103,7 +103,7 @@ process overlapPeaks {
 
     script:
     """
-    python ${workflow.projectDir}/py/overlap_beds.py asb_file, 
+    python ${workflow.projectDir}/py/overlap_beds.py ${asb_file} ${bed_file} ${group_name}.withPeaks.csv 
     """
 }
 
@@ -112,8 +112,8 @@ workflow run_baal {
     baal_groups
 
     main:
-    baal_groups | createSampleFile | baalProcessBams | baalGetASB
+    baal_groups | createSampleFile | baalProcessBams | baalGetASB | overlapPeaks
 
     emit:
-    baalGetASB.out
+    overlapPeaks.out
 }
