@@ -18,14 +18,15 @@ workflow import_samples {
     Channel
         .fromPath(params.experiments)
         .splitCsv(header:true)
-        .map({row -> tuple(row.run,
+        .map({row -> tuple(
+	        row.run,
                 "${row.cell_line}_${row.transcription_factor}",
                 row.transcription_factor,
                 row.experiment,
                 file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
                 file("${params.staging_root}/${row.bed_file}"),
-                file("${params.staging_root}/${row.snp_list}"))})
-        .fork {
+                file("${params.staging_root}/${row.snp_list}"))}
+	).fork {
             run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
             metadata: [run, group, transcription_factor, experiment, bed_file, snp_file]
@@ -73,7 +74,7 @@ workflow filter_fastq_before {
     fastq_list
 
     main:
-    pre_filter_fastq(fastq_list)
+    fastq_list | pre_filter_fastq
 
     emit:
     result = pre_filter_fastq.out.fastq_list
