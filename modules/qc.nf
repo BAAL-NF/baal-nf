@@ -45,7 +45,7 @@ process getFastqcResult {
 }
 
 workflow filter_fastq {
-    get:
+    take:
     fastq_list
 
     main:
@@ -126,7 +126,7 @@ process getFastqScreenResult {
 }
 
 workflow fastq_screen {
-    get:
+    take:
     fastq_ch
 
     main:
@@ -156,7 +156,7 @@ process multiQC {
 }
 
 workflow multi_qc {
-    get:
+    take:
     metadata
     report
 

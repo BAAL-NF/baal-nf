@@ -108,7 +108,7 @@ process overlapPeaks {
 }
 
 workflow run_baal {
-    get:
+    take:
     baal_groups
 
     main:

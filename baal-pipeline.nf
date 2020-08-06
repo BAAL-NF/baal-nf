@@ -42,7 +42,7 @@ workflow import_samples {
 // Count fastq files that have made it through filtering, create a group key, and separate out the fastq files
 // into their own channel for the sake of further processing.
 workflow count_fastq {
-    get:
+    take:
     metadata
     fastq_files
 
@@ -70,7 +70,7 @@ workflow count_fastq {
 // Filtering stages. These are done before and after TrimGalore.
 workflow filter_fastq_before {
     include filter_fastq as pre_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_pre)
-    get:
+    take:
     fastq_list
 
     main:
@@ -86,7 +86,7 @@ workflow filter_fastq_after {
     include filter_fastq as post_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_post)
     include fastq_screen from "./modules/qc.nf" params(fastq_screen_conf: params.fastq_screen_conf)
 
-    get:
+    take:
     fastq_list
 
     main:

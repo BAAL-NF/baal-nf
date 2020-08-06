@@ -85,7 +85,7 @@ process index {
 }
 
 workflow create_bam {
-    get:
+    take:
     fastq_files
 
     main:
