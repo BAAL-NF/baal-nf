@@ -72,7 +72,7 @@ process fastqScreen {
     tuple run, file('*screen*'), emit: report
 
     script:
-    options = []
+    options = ['--aligner', 'bowtie2']
 
     if (params.fastq_screen_conf){
         options += ["--conf", "${params.fastq_screen_conf}"]
