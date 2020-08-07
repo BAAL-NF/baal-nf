@@ -64,6 +64,8 @@ process baalProcessBams {
 process baalGetASB {
     errorStrategy { (task.attempt < 5) ? "retry" : "ignore"}
 
+    //shell = ['/bin/bash', '-c', "/usr/bin/env", 'mpirun', '-np', '1', "${params.mpiflags}"]
+
     label "baal_chip"
     label "mpi"
     label "bigmem"
@@ -91,8 +93,6 @@ process baalGetASB {
 }
 
 process overlapPeaks {
-    conda 'pyranges pandas'
-
     publishDir("${params.report_dir}/asb", mode: "copy")
 
     input:
