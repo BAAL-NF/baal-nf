@@ -18,14 +18,15 @@ workflow import_samples {
     Channel
         .fromPath(params.experiments)
         .splitCsv(header:true)
-        .map({row -> tuple(row.run,
+        .map({row -> tuple(
+	        row.run,
                 "${row.cell_line}_${row.transcription_factor}",
                 row.transcription_factor,
                 row.experiment,
                 file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
                 file("${params.staging_root}/${row.bed_file}"),
-                file("${params.staging_root}/${row.snp_list}"))})
-        .fork {
+                file("${params.staging_root}/${row.snp_list}"))}
+	).multiMap {
             run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
             metadata: [run, group, transcription_factor, experiment, bed_file, snp_file]
@@ -41,7 +42,7 @@ workflow import_samples {
 // Count fastq files that have made it through filtering, create a group key, and separate out the fastq files
 // into their own channel for the sake of further processing.
 workflow count_fastq {
-    get:
+    take:
     metadata
     fastq_files
 
@@ -54,7 +55,7 @@ workflow count_fastq {
             [ runs, groupKey(tag, num_samples), transcription_factor, experiments, bed_files, snp_files, fastq_files ]
         })
         .transpose()
-        .fork {
+        .multiMap {
           run, key, transcription_factor, experiment, bed_file, snp_file, fastq_files ->
           fastq: [ run, fastq_files ]
           metadata: [ run, key, transcription_factor, experiment, bed_file, snp_file ]
@@ -68,12 +69,12 @@ workflow count_fastq {
 
 // Filtering stages. These are done before and after TrimGalore.
 workflow filter_fastq_before {
-    include filter_fastq as pre_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_pre)
-    get:
+    include { filter_fastq as pre_filter_fastq } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_pre)
+    take:
     fastq_list
 
     main:
-    pre_filter_fastq(fastq_list)
+    fastq_list | pre_filter_fastq
 
     emit:
     result = pre_filter_fastq.out.fastq_list
@@ -82,10 +83,9 @@ workflow filter_fastq_before {
 
 // After TrimGalore we also run FastQ-screen to check for contamination
 workflow filter_fastq_after {
-    include filter_fastq as post_filter_fastq from "./modules/qc.nf" params(report_dir: params.report_dir, fastqc_conf: params.fastqc_conf_post)
-    include fastq_screen from "./modules/qc.nf" params(fastq_screen_conf: params.fastq_screen_conf)
+    include { filter_fastq as post_filter_fastq; fastq_screen } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_post)
 
-    get:
+    take:
     fastq_list
 
     main:
@@ -131,9 +131,9 @@ process mergeBeds {
 }
 
 workflow {
-    include "./modules/fastq.nf" params(genome: params.genome, report_dir: params.report_dir, picard_cmd: params.picard_cmd)
-    include "./modules/baal.nf" params(report_dir: params.report_dir, mpiflags: params.mpiflags)
-    include multi_qc from "./modules/qc.nf"  params(report_dir: params.report_dir)
+    include { trimGalore; create_bam } from "./modules/fastq.nf" 
+    include { run_baal } from "./modules/baal.nf"
+    include { multi_qc } from "./modules/qc.nf"  params(report_dir: params.report_dir)
 
     // Load CSV file
     import_samples()

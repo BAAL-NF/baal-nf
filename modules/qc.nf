@@ -20,7 +20,6 @@ process fastQC {
     }
 
     config_cmd = config_args.join(" ")
-
     """
     # FASTQC run ${run}
     fastqc ${config_cmd} ${fastq_files}
@@ -46,7 +45,7 @@ process getFastqcResult {
 }
 
 workflow filter_fastq {
-    get:
+    take:
     fastq_list
 
     main:
@@ -73,7 +72,7 @@ process fastqScreen {
     tuple run, file('*screen*'), emit: report
 
     script:
-    options = []
+    options = ['--aligner', 'bowtie2']
 
     if (params.fastq_screen_conf){
         options += ["--conf", "${params.fastq_screen_conf}"]
@@ -127,7 +126,7 @@ process getFastqScreenResult {
 }
 
 workflow fastq_screen {
-    get:
+    take:
     fastq_ch
 
     main:
@@ -157,7 +156,7 @@ process multiQC {
 }
 
 workflow multi_qc {
-    get:
+    take:
     metadata
     report
 

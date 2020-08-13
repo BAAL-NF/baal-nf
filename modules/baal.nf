@@ -65,7 +65,7 @@ process baalGetASB {
     errorStrategy { (task.attempt < 5) ? "retry" : "ignore"}
 
     label "baal_chip"
-    label "mpi"
+    label "parallel"
     label "bigmem"
 
     input:
@@ -76,11 +76,11 @@ process baalGetASB {
 
     script:
     """
-    #!/usr/bin/env mpirun -np 1 ${params.mpiflags} Rscript
+    #!/usr/bin/env Rscript
     library(BaalChIP)
     # Read in hets from file
     res <- readRDS("process_bams.rds")
-    res <- getASB(res, Iter=5000, conf_level=0.95)
+    res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus})
     saveRDS(res, "final.rds")
     report <- BaalChIP.report(res)
 
@@ -91,8 +91,7 @@ process baalGetASB {
 }
 
 process overlapPeaks {
-    conda 'pyranges pandas'
-
+    label "python"
     publishDir("${params.report_dir}/asb", mode: "copy")
 
     input:
@@ -108,7 +107,7 @@ process overlapPeaks {
 }
 
 workflow run_baal {
-    get:
+    take:
     baal_groups
 
     main:
