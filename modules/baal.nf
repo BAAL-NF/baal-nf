@@ -64,9 +64,8 @@ process baalProcessBams {
 process baalGetASB {
     errorStrategy { (task.attempt < 5) ? "retry" : "ignore"}
 
-
     label "baal_chip"
-    label "mpi"
+    label "parallel"
     label "bigmem"
 
     input:
