@@ -62,6 +62,7 @@ process baalProcessBams {
 }
 
 process baalGetASB {
+    publishDir("${params.report_dir}/baal_reports", mode: "copy", pattern: "${group_name}.html")
     errorStrategy { (task.attempt < 5) ? "retry" : "ignore"}
 
     label "baal_chip"
@@ -72,21 +73,29 @@ process baalGetASB {
     tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
 
     output:
-    tuple group_name, file("*.csv"), file(bed_file)
+    tuple group_name, file("*.csv"), file(bed_file), emit: asb
+    file("${group_name}.html")
 
     script:
     """
     #!/usr/bin/env Rscript
     library(BaalChIP)
+    library(knitr)
+    library(rmarkdown)
     # Read in hets from file
     res <- readRDS("process_bams.rds")
     res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus})
     saveRDS(res, "final.rds")
     report <- BaalChIP.report(res)
 
+    # Write ASB results to CSV file
     for (group in names(report)) {
             write.csv(report[[group]], paste(group,".csv", sep=""))
     }
+
+    # generate final report
+    knit("${workflow.projectDir}/doc/baal_report.Rmd")
+    render("baal_report.md", output_format="all", output_file="${group_name}")
     """
 }
 
@@ -111,7 +120,8 @@ workflow run_baal {
     baal_groups
 
     main:
-    baal_groups | createSampleFile | baalProcessBams | baalGetASB | overlapPeaks
+    baal_groups | createSampleFile | baalProcessBams | baalGetASB 
+    baalGetASB.out.asb | overlapPeaks
 
     emit:
     overlapPeaks.out
