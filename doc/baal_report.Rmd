@@ -1,0 +1,43 @@
+---
+title: "BaalChIP report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(BaalChIP)
+```
+
+```{r, echo=FALSE}
+report <- readRDS("final.rds")
+```
+
+## QC results
+
+```{r}
+summaryQC(report)
+```
+
+```{r}
+plotQC(report, what="boxplot_per_filter")
+plotQC(report, what="overall_pie")
+```
+
+## ASB results
+
+```{r}
+summaryASB(report)
+```
+
+## RAF adjustments
+
+```{r}
+adjustmentBaalPlot(report, col=c("cyan4","chocolate3"))
+```
+
+## Session Information
+
+```{r}
+sessionInfo()
+```
