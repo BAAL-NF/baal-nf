@@ -19,14 +19,14 @@ workflow import_samples {
         .fromPath(params.experiments)
         .splitCsv(header:true)
         .map({row -> tuple(
-	        row.run,
+            row.run,
                 "${row.cell_line}_${row.transcription_factor}",
                 row.transcription_factor,
                 row.experiment,
                 file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
                 file("${params.staging_root}/${row.bed_file}"),
                 file("${params.staging_root}/${row.snp_list}"))}
-	).multiMap {
+    ).multiMap {
             run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
             metadata: [run, group, transcription_factor, experiment, bed_file, snp_file]
@@ -172,10 +172,10 @@ workflow {
     bam_files = count_fastq.out.metadata
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
-		.map {
+        .map {
                    runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files -> 
-		   [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
-		}
+           [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
+        }
 
     if (params.run_baal) {
         bam_files | mergeBeds | run_baal
