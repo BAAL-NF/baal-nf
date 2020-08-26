@@ -6,7 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.1](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/1.0.0...1.0.1) - 26.8.2020
+### Changed
+- Fix bug causing incorrect rendering of Baal ChIP reports
+
+## [[1.0.1]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/1.0.0...1.0.1) - 26.8.2020
 
 ### Changed
 
