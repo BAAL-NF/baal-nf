@@ -22,7 +22,15 @@ if __name__ == '__main__':
 
     asb = pr.PyRanges(asb_df)
 
-    peaks = pr.read_bed(args.bed_file)
+    try:
+        peaks = pr.read_bed(args.bed_file)
+    except IndexError:
+        # This tends to indicate an empty bed file, so mark all SNPs as
+        # not in a peak and exit
+        asb_df["peak"] = False
+        asb_df.to_csv(args.output)
+        exit(0)
+
     peaks = peaks.insert(pd.Series(name="peak", data=[1]*len(peaks)))
 
     intersection = asb.join(peaks, how='left')
@@ -30,6 +38,4 @@ if __name__ == '__main__':
    
     result_df["peak"] = result_df.apply(lambda row: row["peak"] == 1, axis=1)
     result_df[input_cols + ["peak"]].to_csv(args.output)
-
-
 
