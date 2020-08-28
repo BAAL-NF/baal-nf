@@ -28,7 +28,6 @@ process baalProcessBams {
     label "baal_chip"
     label "retry_mem"
 
-    errorStrategy { (task.attempt < 3) ? "retry" : "ignore"}
 
     input:
     tuple group_name, file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
@@ -63,7 +62,7 @@ process baalProcessBams {
 
 process baalGetASB {
     publishDir("${params.report_dir}/baal_reports", mode: "copy", pattern: "${group_name}.html")
-    errorStrategy { (task.attempt < 5) ? "retry" : "ignore"}
+    label "retry_mem"
 
     label "baal_chip"
     label "parallel"
