@@ -93,7 +93,7 @@ process baalGetASB {
     }
 
     # set the knitr working directory to the current working directory.
-    opts_knit$set(root.dir = getwd())
+    opts_knit\$set(root.dir = getwd())
     # generate final report
     knit("${workflow.projectDir}/doc/baal_report.Rmd")
     render("baal_report.md", output_format="all", output_file="${group_name}")

@@ -1,9 +1,8 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
-params.staging_root = "${workflow.projectDir}/test/staging/runs"
-params.experiments = "${params.staging_root}/runs.csv"
-params.report_dir = "${workflow.projectDir}/test/reports/"
+params.experiments = ""
+params.report_dir = "${workflow.launchDir}/reports/"
 params.genome = "hg19"
 params.picard_cmd = "picard"
 params.mpiflags = ""
@@ -23,9 +22,9 @@ workflow import_samples {
                 "${row.cell_line}_${row.transcription_factor}",
                 row.transcription_factor,
                 row.experiment,
-                file("${params.staging_root}/${row.fastq_folder}*.fastq.gz"),
-                file("${params.staging_root}/${row.bed_file}"),
-                file("${params.staging_root}/${row.snp_list}"))}
+                file("${row.fastq_folder}*.fastq.gz"),
+                file("${row.bed_file}"),
+                file("${row.snp_list}"))}
     ).multiMap {
             run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
