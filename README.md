@@ -17,9 +17,26 @@ The pipeline is run using nextflow, and currently supports native and anaconda e
 
 # Usage and Configuration
 
-You will need to have the BaalChIP package installed in your native environment, or in an anaconda environment in order to run. We use a modified version of BaalChIP currently available at (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP)
+Due to their prohibitive size, you must download the hg19 index for bowtie2 and provide it to the pipeline by setting the BOWTIE2_INDEXES environment variable, i.e.
+
+```groovy
+BOWTIE2_INDEXES = "/path/to/bowtie2/index"
+```
+
+You will also need to have the BaalChIP package installed in your native environment, or in an anaconda environment in order to run. We use a modified version of BaalChIP currently available at (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP).
+If your cluster supports docker or singularity, use the docker and singularity profiles. At present, baal-nf doesn't correctly handle source files, so you will need to add both the directory where nextflow has stored baal-nf and the directory with any configuration files, reference genomes and similar to the singularity or docker mount options manually, using e.g.
+
+```groovy
+singularity.runOptions = "--bind /path/to/baal-nf --bind /path/to/working/dir"
+```
+
+We intend to fix this in a future release.
 
 # ToDo
 
 - Automatic fetching of fastq files from the ENA archive
 - Automatic export to SQL or SQLite database
+- Fix singularity/docker mount points so pipeline can run
+- Add a small testing set to the project
+- Configurable genomes
+- Automatic download of genomes
