@@ -50,7 +50,7 @@ baal-nf requires a listing of input files in CSV format, with the following name
 
 - Automatic fetching of fastq files from the ENA archive
 - Automatic export to SQL or SQLite database
-- Fix singularity/docker mount points so pipeline can run
+- Fix singularity/docker mount points so pipeline can run without the user having to configure mount points
 - Add a small testing set to the project
 - Configurable genomes
 - Automatic download of genomes
