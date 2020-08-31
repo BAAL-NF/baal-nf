@@ -37,6 +37,7 @@ We intend to fix this in a future release.
 baal-nf requires a listing of input files in CSV format, with the following named columns
 
 | Column name | Example | Description |
+| :----- | :----- | :----- |
 | cell_line | GM12878 | Cell line |
 | transcription_factor | ESR1 | Transcription Factor |
 | experiment | SRX123456 | Unique identifier of the sequencing experiment|
