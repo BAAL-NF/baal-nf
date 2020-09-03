@@ -20,7 +20,7 @@ The pipeline is run using nextflow, and currently supports native and anaconda e
 Due to their prohibitive size, you must download the hg19 index for bowtie2 and provide it to the pipeline by setting the BOWTIE2_INDEXES environment variable, i.e.
 
 ```groovy
-BOWTIE2_INDEXES = "/path/to/bowtie2/index"
+env.BOWTIE2_INDEXES = "/path/to/bowtie2/index"
 ```
 
 You will also need to have the BaalChIP package installed in your native environment, or in an anaconda environment in order to run. We use a modified version of BaalChIP currently available at (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP).
