@@ -1,22 +1,26 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
-params.bowtie2_index = ""
-params.experiments = ""
+params.bowtie2_index = "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg19/Sequence/Bowtie2Index/"
+params.sample_file = ""
 params.report_dir = "${workflow.launchDir}/reports/"
-params.genome = "hg19"
+params.genome = "genome"
 params.picard_cmd = "picard"
-params.mpiflags = ""
 params.fastqc_conf_pre = "${workflow.projectDir}/data/before_limits.txt"
 params.fastqc_conf_post = "${workflow.projectDir}/data/after_limits.txt"
 params.fastq_screen_conf = "/dummy/config" //FIXME
 params.run_baal = true
 
+if (params.sample_file.isEmpty()) {
+    println("Error: no sample file provided")
+    exit 1
+}
+
 // Import a CSV file with all sample identifiers
 workflow import_samples {
     main:
     Channel
-        .fromPath(params.experiments)
+        .fromPath(params.sample_file, checkIfExists: true)
         .splitCsv(header:true)
         .map({row -> tuple(
             row.run,

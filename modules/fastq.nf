@@ -1,5 +1,5 @@
-params.genome = "hg19"
-params.report_dir = "${workflow.launchDir}/test/reports/"
+params.genome = "genome"
+params.report_dir = "${workflow.launchDir}/reports/"
 params.picard_cmd = "picard"
 
 process trimGalore {
