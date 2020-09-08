@@ -1,6 +1,7 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
+params.bowtie2_index = ""
 params.experiments = ""
 params.report_dir = "${workflow.launchDir}/reports/"
 params.genome = "hg19"
@@ -8,7 +9,7 @@ params.picard_cmd = "picard"
 params.mpiflags = ""
 params.fastqc_conf_pre = "${workflow.projectDir}/data/before_limits.txt"
 params.fastqc_conf_post = "${workflow.projectDir}/data/after_limits.txt"
-params.fastq_screen_conf = ""
+params.fastq_screen_conf = "/dummy/config" //FIXME
 params.run_baal = true
 
 // Import a CSV file with all sample identifiers
@@ -22,7 +23,7 @@ workflow import_samples {
                 "${row.cell_line}_${row.transcription_factor}",
                 row.transcription_factor,
                 row.experiment,
-                file("${row.fastq_folder}*.fastq.gz"),
+                (([row.fastq_1, row.fastq_2] - "").collect { path -> file(path) }),
                 file("${row.bed_file}"),
                 file("${row.snp_list}"))}
     ).multiMap {
@@ -130,7 +131,7 @@ process mergeBeds {
 }
 
 workflow {
-    include { trimGalore; create_bam } from "./modules/fastq.nf" 
+    include { trimGalore; create_bam } from "./modules/fastq.nf" params(bowtie2_index: params.bowtie2_index)
     include { run_baal } from "./modules/baal.nf"
     include { multi_qc } from "./modules/qc.nf"  params(report_dir: params.report_dir)
 

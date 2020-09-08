@@ -70,6 +70,7 @@ process baalGetASB {
 
     input:
     tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
+    path report_md, stageAs: "baal_report.Rmd"
 
     output:
     tuple group_name, file("*.csv"), file(bed_file), emit: asb
@@ -92,10 +93,8 @@ process baalGetASB {
             write.csv(report[[group]], paste(group,".csv", sep=""))
     }
 
-    # set the knitr working directory to the current working directory.
-    opts_knit\$set(root.dir = getwd())
     # generate final report
-    knit("${workflow.projectDir}/doc/baal_report.Rmd")
+    knit("baal_report.Rmd")
     render("baal_report.md", output_format="all", output_file="${group_name}")
     """
 }
@@ -106,13 +105,14 @@ process overlapPeaks {
 
     input:
     tuple group_name, file(asb_file), file(bed_file)
+    path script
 
     output:
     file("${group_name}.withPeaks.csv")
 
     script:
     """
-    python ${workflow.projectDir}/py/overlap_beds.py ${asb_file} ${bed_file} ${group_name}.withPeaks.csv 
+    python ${script} ${asb_file} ${bed_file} ${group_name}.withPeaks.csv 
     """
 }
 
@@ -121,8 +121,10 @@ workflow run_baal {
     baal_groups
 
     main:
-    baal_groups | createSampleFile | baalProcessBams | baalGetASB 
-    baalGetASB.out.asb | overlapPeaks
+    report_md = channel.from("${workflow.projectDir}/doc/baal_report.Rmd")
+    baal_groups | createSampleFile | baalProcessBams 
+    baalGetASB(baalProcessBams.out, report_md)
+    overlapPeaks(baalGetASB.out.asb, channel.from("${workflow.projectDir}/py/overlap_beds.py"))
 
     emit:
     overlapPeaks.out

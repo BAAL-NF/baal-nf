@@ -8,21 +8,15 @@ process fastQC {
 
     input:
     tuple run, file(fastq_files)
+    file fastqc_conf
 
     output:
     tuple file("*_fastqc.zip"), file("*_fastqc.html"), run, file(fastq_files)
 
     script:
-    config_args=[]
-
-    if (params.fastqc_conf) {
-        config_args += ["-l", "${params.fastqc_conf}"]
-    }
-
-    config_cmd = config_args.join(" ")
     """
     # FASTQC run ${run}
-    fastqc ${config_cmd} ${fastq_files}
+    fastqc -l ${fastqc_conf} ${fastq_files}
     """
 }
 
@@ -49,7 +43,8 @@ workflow filter_fastq {
     fastq_list
 
     main:
-    result = fastQC(fastq_list) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
+    ch_fastqc_conf = file(params.fastqc_conf)
+    result = fastQC(fastq_list, ch_fastqc_conf) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
 
     report = fastQC.out.map {
         zip, html, run, fastq_files -> [run, [zip, html].flatten()]
@@ -66,17 +61,14 @@ process fastqScreen {
 
     input:
     tuple run, file(trimmed)
-
+    file fastq_screen_conf
     output:
     tuple run, file("*screen.txt"), emit: screening_result
     tuple run, file('*screen*'), emit: report
 
     script:
     options = ['--aligner', 'bowtie2']
-
-    if (params.fastq_screen_conf){
-        options += ["--conf", "${params.fastq_screen_conf}"]
-    }
+    options += ["--conf", "${params.fastq_screen_conf}"]
     optargs = options.join(" ")
 
     """
@@ -130,7 +122,8 @@ workflow fastq_screen {
     fastq_ch
 
     main:
-    screen = fastqScreen(fastq_ch)
+    ch_fastq_screen_conf = file(params.fastq_screen_conf)
+    screen = fastqScreen(fastq_ch, ch_fastq_screen_conf)
     result = getFastqScreenResult(screen.screening_result) | filter { it[1] =~ /pass/ } | map { it -> it [0] }
 
     emit:

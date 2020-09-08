@@ -40,6 +40,7 @@ process createBam {
 
     input:
     tuple run, file(trimmed)
+    file index_files
 
     output:
     tuple run, file("${run}_dedup.bam"), emit: bamfile
@@ -49,6 +50,7 @@ process createBam {
     script:
     // I hate the fact that I have to fall back on bash to check the length of this list.
     """
+    export BOWTIE2_INDEXES=${index_files}
     FILES=(${trimmed})
     case \${#FILES[@]} in
         1)
@@ -88,7 +90,8 @@ workflow create_bam {
     fastq_files
 
     main:
-    fastq_files | createBam
+    index_ch = file(params.bowtie2_index, type: "dir")
+    createBam(fastq_files, index_ch)
     createBam.out.bamfile | index
 
     emit:
