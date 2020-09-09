@@ -7,25 +7,25 @@ process fastQC {
     label 'fastq'
 
     input:
-    tuple run, file(fastq_files)
+    tuple run, file("${run}*.fastq.gz")
     file fastqc_conf
 
     output:
-    tuple file("*_fastqc.zip"), file("*_fastqc.html"), run, file(fastq_files)
+    tuple run, file("*_fastqc.zip"), file("*_fastqc.html")
 
     script:
     """
     # FASTQC run ${run}
-    fastqc -l ${fastqc_conf} ${fastq_files}
+    fastqc -l ${fastqc_conf} ${run}*.fastq.gz
     """
 }
 
 process getFastqcResult {
     input:
-    tuple file(report_zip), file(html_report), identifier, fastq_files
+    tuple run, file(report_zip), file(html_report)
 
     output:
-    tuple stdout, identifier, fastq_files
+    tuple stdout, run
 
     script:
     script = ""
@@ -44,14 +44,14 @@ workflow filter_fastq {
 
     main:
     ch_fastqc_conf = file(params.fastqc_conf)
-    result = fastQC(fastq_list, ch_fastqc_conf) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
+    filtered = fastQC(fastq_list, ch_fastqc_conf) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
 
     report = fastQC.out.map {
-        zip, html, run, fastq_files -> [run, [zip, html].flatten()]
+        run, zip, html -> [run, [zip, html].flatten()]
     }
 
     emit:
-      fastq_list = result
+      fastq_list = filtered
       report = report
 }
 
@@ -60,7 +60,7 @@ process fastqScreen {
     label 'fastq'
 
     input:
-    tuple run, file(trimmed)
+    tuple run, path("${run}*.fastq.gz")
     file fastq_screen_conf
     output:
     tuple run, file("*screen.txt"), emit: screening_result
@@ -72,7 +72,7 @@ process fastqScreen {
     optargs = options.join(" ")
 
     """
-    FILES=(${trimmed})
+    FILES=(${run}*.fastq.gz)
     case \${#FILES[@]} in
 
         1)

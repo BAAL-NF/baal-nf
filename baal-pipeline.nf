@@ -63,31 +63,34 @@ workflow count_fastq {
 
 // Filtering stages. These are done before and after TrimGalore.
 workflow filter_fastq_before {
-    include { filter_fastq as pre_filter_fastq } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_pre)
+    include { filter_fastq as fastqc_before_trimming } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_pre)
     take:
     fastq_list
 
     main:
-    fastq_list | pre_filter_fastq
+    fastqc_before_trimming(fastq_list)
+    result = fastqc_before_trimming.out.fastq_list.join(fastq_list)
 
     emit:
-    result = pre_filter_fastq.out.fastq_list
-    report = pre_filter_fastq.out.report
+    result = result
+    report = fastqc_before_trimming.out.report
 }
 
 // After TrimGalore we also run FastQ-screen to check for contamination
 workflow filter_fastq_after {
-    include { filter_fastq as post_filter_fastq; fastq_screen } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_post)
+    include { filter_fastq as fastqc_after_trimming; fastq_screen } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_post)
 
     take:
     fastq_list
 
     main:
-    post_filter_fastq(fastq_list)
-    fastq_list | fastq_screen
+    fastqc_after_trimming(fastq_list)
+    fastq_screen(fastq_list)
 
-    result = post_filter_fastq.out.fastq_list.join(fastq_screen.out.result)
-    report = post_filter_fastq.out.report
+    result = fastqc_after_trimming.out.fastq_list
+                                      .join(fastq_screen.out.result)
+                                      .join(fastq_list)
+    report = fastqc_after_trimming.out.report
                 .mix(fastq_screen.out.report)
 
     emit:
@@ -125,7 +128,7 @@ process mergeBeds {
 }
 
 workflow {
-    include { trimGalore; create_bam } from "./modules/fastq.nf" params(bowtie2_index: params.bowtie2_index)
+    include { trimGalore; create_bam } from "./modules/fastq.nf" params(bowtie2_index: params.bowtie2_index, genome: params.genome)
     include { run_baal } from "./modules/baal.nf"
     include { multi_qc } from "./modules/qc.nf"  params(report_dir: params.report_dir)
 

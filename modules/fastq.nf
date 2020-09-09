@@ -6,7 +6,7 @@ process trimGalore {
     label 'fastq'
 
     input:
-    tuple run, file(fastq_files)
+    tuple run, file("${run}*.fastq.gz")
 
     output:
     tuple run, file("${run}_tg*"), emit: trimmed_fastq
@@ -14,7 +14,7 @@ process trimGalore {
 
     script:
     """
-    FILES=(${fastq_files})
+    FILES=(${run}*.fastq.gz)
     case \${#FILES[@]} in
         1)
         trim_galore --basename ${run}_tg \${FILES[0]}
