@@ -6,8 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Support for automatic staging of the iGenomes hg19 genome
+- Pipeline reporting is now part of the reports by default
 
-## [[0.2.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.1.1...0.2.1)
+### Changed
+- New input format with explicit paired-end input
+- Required configuration files are now (mostly) staged through nextflow channels, reducing the need for custom mount points
+- Added test profile which stages a test set from github
+
+## [[0.2.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.1.1...0.2.1) - 28.8.2020
 
 ### Changed
 - Fix bug causing incorrect rendering of Baal ChIP reports
