@@ -5,10 +5,10 @@ process createSampleFile {
     publishDir("${params.report_dir}/samples/", mode:"copy")
 
     input:
-    tuple runs, group_name, antigens, experiments, bed_file, snp_files, bamfiles, index_files
+    tuple val(runs), val(group_name), val(antigens), val(experiments), file(bed_file), file(snp_files), file(bamfiles), file(index_files)
 
     output:
-    tuple group_name, bed_file, snp_files, bamfiles, index_files, file("${group_name}.tsv")
+    tuple val(group_name), file(bed_file), file(snp_files), file(bamfiles), file(index_files), file("${group_name}.tsv")
 
     script:
         output = "cat << EOF > ${group_name}.tsv\n"
@@ -25,10 +25,10 @@ process baalProcessBams {
     label "baal_chip"
 
     input:
-    tuple group_name, file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
+    tuple val(group_name), file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
 
     output:
-    tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
+    tuple val(group_name), file("process_bams.rds"), file(snp_file), file(bed_file)
 
     script:
     """
@@ -63,11 +63,11 @@ process baalGetASB {
     label "bigmem"
 
     input:
-    tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
+    tuple val(group_name), file("process_bams.rds"), file(snp_file), file(bed_file)
     path report_md, stageAs: "baal_report.Rmd"
 
     output:
-    tuple group_name, file("*.csv"), file(bed_file), emit: asb
+    tuple val(group_name), file("*.csv"), file(bed_file), emit: asb
     file("${group_name}.html")
 
     script:
@@ -98,7 +98,7 @@ process overlapPeaks {
     publishDir("${params.report_dir}/asb", mode: "copy")
 
     input:
-    tuple group_name, file(asb_file), file(bed_file)
+    tuple val(group_name), file(asb_file), file(bed_file)
     path script
 
     output:

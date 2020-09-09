@@ -3,11 +3,11 @@ process trimGalore {
     label 'parallel'
 
     input:
-    tuple run, file("${run}*.fastq.gz")
+    tuple val(run), file("${run}*.fastq.gz")
 
     output:
-    tuple run, file("${run}_tg*"), emit: trimmed_fastq
-    tuple run, file('*report*'), emit: report
+    tuple val(run), file("${run}_tg*"), emit: trimmed_fastq
+    tuple val(run), file('*report*'), emit: report
 
     script:
     extra_args = ""
@@ -43,12 +43,12 @@ process createBam {
     maxRetries 3
 
     input:
-    tuple run, file(trimmed)
+    tuple val(run), file(trimmed)
     file index_files
 
     output:
-    tuple run, file("${run}_dedup.bam"), emit: bamfile
-    tuple run, file("**.metrics"), emit: report
+    tuple val(run), file("${run}_dedup.bam"), emit: bamfile
+    tuple val(run), file("**.metrics"), emit: report
     file "${run}.log"
 
     script:
@@ -83,10 +83,10 @@ process createBam {
 process index {
     label 'fastq'
     input:
-    tuple run, file(bamfile)
+    tuple val(run), file(bamfile)
 
     output:
-    tuple run, file(bamfile), file("${bamfile}.bai")
+    tuple val(run), file(bamfile), file("${bamfile}.bai")
 
     """
     samtools index ${bamfile}

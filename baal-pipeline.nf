@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 if (params.sample_file.isEmpty()) {
     println("Error: no sample file provided")
@@ -102,7 +102,7 @@ process reportFastQC {
     publishDir("${params.report_dir}/preFastQC/${key}/", mode: "copy")
 
     input:
-    tuple key, file(reports)
+    tuple val(key), file(reports)
 
     output:
     file reports
@@ -116,10 +116,10 @@ process mergeBeds {
      label "fastq"
  
      input:
-     tuple runs, group_name, antigens, experiments, file(bedfiles), snp_files, bamfiles, index_files
+     tuple val(runs), val(group_name), val(antigens), val(experiments), file(bedfiles), file(snp_files), file(bamfiles), file(index_files)
 
      output:
-     tuple runs, group_name, antigens, experiments, file("${group_name}.bed"), snp_files, bamfiles, index_files
+     tuple val(runs), val(group_name), val(antigens), val(experiments), file("${group_name}.bed"), file(snp_files), file(bamfiles), file(index_files)
  
      script:
      """

@@ -4,11 +4,11 @@ process fastQC {
     label 'fastq'
 
     input:
-    tuple run, file("${run}*.fastq.gz")
+    tuple val(run), file("${run}*.fastq.gz")
     file fastqc_conf
 
     output:
-    tuple run, file("*_fastqc.zip"), file("*_fastqc.html")
+    tuple val(run), file("*_fastqc.zip"), file("*_fastqc.html")
 
     script:
     """
@@ -19,10 +19,10 @@ process fastQC {
 
 process getFastqcResult {
     input:
-    tuple run, file(report_zip), file(html_report)
+    tuple val(run), file(report_zip), file(html_report)
 
     output:
-    tuple stdout, run
+    tuple stdout, val(run)
 
     script:
     script = ""
@@ -57,11 +57,11 @@ process fastqScreen {
     label 'fastq'
 
     input:
-    tuple run, path("${run}*.fastq.gz")
+    tuple val(run), path("${run}*.fastq.gz")
     file fastq_screen_conf
     output:
-    tuple run, file("*screen.txt"), emit: screening_result
-    tuple run, file('*screen*'), emit: report
+    tuple val(run), file("*screen.txt"), emit: screening_result
+    tuple val(run), file('*screen*'), emit: report
 
     script:
     options = ['--aligner', 'bowtie2']
@@ -91,10 +91,10 @@ process getFastqScreenResult {
     label "python"
 
     input:
-    tuple run, file(screening_result)
+    tuple val(run), file(screening_result)
 
     output:
-    tuple run, stdout
+    tuple val(run), stdout
 
     script:
     """
@@ -134,7 +134,7 @@ process multiQC {
 
     label "fastq"
     input:
-    tuple key, file(results)
+    tuple val(key), file(results)
 
     output:
     file("multiqc_*")
