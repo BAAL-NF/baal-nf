@@ -55,8 +55,7 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 | bowtie2_index | `"s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg19/Sequence/Bowtie2Index/"` | Location of bowtie2 index files if using local cache | No
 | sample_file | No default| Input file as specified [in the previous section](##input-file-format) | Yes 
 | report_dir | `"${workflow.launchDir}/reports/"`| Directory to place all reports in, defaults to a subfolder named `reports` in the launch directory. | No
-| genome | `"genome"`| Name of the reference gebnome used for mapping. This should correspond to the file name for your local copy of hg19, if changed. | No
-| picard_cmd | `"picard"` | Command used to run picard | No 
+| genome | `"genome"`| Name of the reference genome used for mapping. This should correspond to the file name for your local copy of hg19, if changed. | No 
 | fastqc_conf_pre | `"${workflow.projectDir}/data/before_limits.txt"` | `fastqc` configuration used for pre-screening| No
 | fastqc_conf_post | `"${workflow.projectDir}/data/after_limits.txt"`| `fastqc` configuration used after adapter trimming | No
 | fastq_screen_conf | No default | Fastq-screen configuration file | Yes
@@ -68,4 +67,3 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 - Fix singularity/docker mount points so pipeline can run without the user having to configure mount points
 - Add a small testing set to the project
 - Configurable genomes
-- Automatic download of genomes

@@ -1,6 +1,3 @@
-params.report_dir = "${workflow.launchDir}/test/reports/"
-params.fastqc_conf = ""
-params.fastq_screen_conf = ""
 params.max_acceptable_unmapped = 90
 
 process fastQC {

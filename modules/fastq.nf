@@ -1,7 +1,3 @@
-params.genome = "genome"
-params.report_dir = "${workflow.launchDir}/reports/"
-params.picard_cmd = "picard"
-
 process trimGalore {
     label 'fastq'
 
@@ -48,17 +44,21 @@ process createBam {
     file "${run}.log"
 
     script:
+    extra_args = ""
+    if (task.cpus > 1) {
+        extra_args += "-p ${task.cpus}"
+    }
     // I hate the fact that I have to fall back on bash to check the length of this list.
     """
     export BOWTIE2_INDEXES=${index_files}
     FILES=(${trimmed})
     case \${#FILES[@]} in
         1)
-        bowtie2 -x ${params.genome} -U \${FILES[0]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
+        bowtie2 -x ${params.genome} ${extra_args} -U \${FILES[0]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
         ;;
 
         2)
-        bowtie2 -x ${params.genome} -1 \${FILES[0]} -2 \${FILES[1]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
+        bowtie2 -x ${params.genome} ${extra_args} -1 \${FILES[0]} -2 \${FILES[1]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
         ;;
 
         *)
@@ -67,7 +67,7 @@ process createBam {
     esac
     samtools sort ${run}.sam -o ${run}.sam.sorted
     samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
-    ${params.picard_cmd} MarkDuplicates I="${run}.bam" O="${run}_dedup.bam" M="${run}.metrics"
+    picard MarkDuplicates I="${run}.bam" O="${run}_dedup.bam" M="${run}.metrics"
     """
 
 }
