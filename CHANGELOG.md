@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support for automatic staging of the iGenomes hg19 genome
 - Pipeline reporting is now part of the reports by default
+- Support for staging directly from URLs and s3 buckets
 
 ### Changed
 - New input format with explicit paired-end input
