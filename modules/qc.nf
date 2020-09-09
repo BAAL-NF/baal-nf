@@ -55,6 +55,7 @@ workflow filter_fastq {
 
 process fastqScreen {
     label 'fastq'
+    label 'parallel'
 
     input:
     tuple val(run), path("${run}*.fastq.gz")
@@ -64,8 +65,12 @@ process fastqScreen {
     tuple val(run), file('*screen*'), emit: report
 
     script:
-    options = ['--aligner', 'bowtie2']
+    options = ["--aligner", "bowtie2"]
     options += ["--conf", "${params.fastq_screen_conf}"]
+    
+    if (task.cpus > 1) {
+        options += ["--threads", "${task.cpus}"]
+    }
     optargs = options.join(" ")
 
     """
