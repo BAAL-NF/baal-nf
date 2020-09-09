@@ -80,6 +80,22 @@ process createBam {
 
 }
 
+process mergeBeds {
+     publishDir("${params.report_dir}/bed_files/", mode: "copy")
+     label "fastq"
+ 
+     input:
+     tuple val(runs), val(group_name), val(antigens), val(experiments), file(bedfiles), file(snp_files), file(bamfiles), file(index_files)
+
+     output:
+     tuple val(runs), val(group_name), val(antigens), val(experiments), file("${group_name}.bed"), file(snp_files), file(bamfiles), file(index_files)
+ 
+     script:
+     """
+     cat ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
+     """
+}
+
 process index {
     label 'fastq'
     input:
