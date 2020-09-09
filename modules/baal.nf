@@ -23,8 +23,6 @@ process createSampleFile {
 
 process baalProcessBams {
     label "baal_chip"
-    label "retry_mem"
-
 
     input:
     tuple group_name, file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
@@ -59,7 +57,6 @@ process baalProcessBams {
 
 process baalGetASB {
     publishDir("${params.report_dir}/baal_reports", mode: "copy", pattern: "${group_name}.html")
-    label "retry_mem"
 
     label "baal_chip"
     label "parallel"

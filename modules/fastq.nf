@@ -1,5 +1,6 @@
 process trimGalore {
     label 'fastq'
+    label 'parallel'
 
     input:
     tuple run, file("${run}*.fastq.gz")
@@ -9,15 +10,20 @@ process trimGalore {
     tuple run, file('*report*'), emit: report
 
     script:
+    extra_args = ""
+    if (task.cpus > 1) {
+        extra_args += "-j ${task.cpus}"
+    }
+
     """
     FILES=(${run}*.fastq.gz)
     case \${#FILES[@]} in
         1)
-        trim_galore --basename ${run}_tg \${FILES[0]}
+        trim_galore ${extra_args} --basename ${run}_tg \${FILES[0]}
         ;;
 
         2)
-        trim_galore --basename ${run}_tg --paired \${FILES[0]} \${FILES[1]}
+        trim_galore ${extra_args} --basename ${run}_tg --paired \${FILES[0]} \${FILES[1]}
         ;;
 
         *)
@@ -30,6 +36,8 @@ process trimGalore {
 process createBam {
     label 'fastq'
     label 'bigmem'
+    label 'parallel'
+
     publishDir("${params.report_dir}/logs/bowtie2/", mode: "copy", pattern: "${run}.log")    
     errorStrategy 'retry'
     maxRetries 3
