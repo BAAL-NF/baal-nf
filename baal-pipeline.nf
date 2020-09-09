@@ -98,6 +98,7 @@ workflow filter_fastq_after {
     report = report
 }
 
+// Dummy process to export FastQC files from the pre-trimming run
 process reportFastQC {
     publishDir("${params.report_dir}/preFastQC/${key}/", mode: "copy")
 
@@ -174,7 +175,5 @@ workflow {
            [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
         }
 
-    if (params.run_baal) {
-        bam_files | mergeBeds | run_baal
-    }
+    bam_files | mergeBeds | run_baal
 }
