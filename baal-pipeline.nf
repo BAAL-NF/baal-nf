@@ -24,12 +24,12 @@ workflow import_samples {
         .splitCsv(header:true)
         .map({row -> tuple(
             row.run,
-                "${row.cell_line}_${row.transcription_factor}",
-                row.transcription_factor,
-                row.experiment,
-                (([row.fastq_1, row.fastq_2] - "").collect { path -> file(path) }),
-                file("${row.bed_file}"),
-                file("${row.snp_list}"))}
+            "${row.cell_line}_${row.transcription_factor}",
+            row.transcription_factor,
+            row.experiment,
+            (([row.fastq_1, row.fastq_2] - "").collect { path -> file(path, checkIfExists: true) }),
+            file("${row.bed_file}", checkIfExists: true),
+            file("${row.snp_list}", checkIfExists: true))}
     ).multiMap {
             run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
