@@ -1,30 +1,30 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
-params.experiments = ""
-params.report_dir = "${workflow.launchDir}/reports/"
-params.genome = "hg19"
-params.picard_cmd = "picard"
-params.mpiflags = ""
-params.fastqc_conf_pre = "${workflow.projectDir}/data/before_limits.txt"
-params.fastqc_conf_post = "${workflow.projectDir}/data/after_limits.txt"
-params.fastq_screen_conf = ""
-params.run_baal = true
+if (params.sample_file.isEmpty()) {
+    println("Error: no sample file provided")
+    exit 1
+}
+
+if (params.fastq_screen_conf.isEmpty()) {
+    println("Error: missing fastq screen configuration file")
+    exit 1
+}
 
 // Import a CSV file with all sample identifiers
 workflow import_samples {
     main:
     Channel
-        .fromPath(params.experiments)
+        .fromPath(params.sample_file, checkIfExists: true)
         .splitCsv(header:true)
         .map({row -> tuple(
             row.run,
-                "${row.cell_line}_${row.transcription_factor}",
-                row.transcription_factor,
-                row.experiment,
-                file("${row.fastq_folder}*.fastq.gz"),
-                file("${row.bed_file}"),
-                file("${row.snp_list}"))}
+            "${row.cell_line}_${row.transcription_factor}",
+            row.transcription_factor,
+            row.experiment,
+            (([row.fastq_1, row.fastq_2] - "").collect { path -> file(path, checkIfExists: true) }),
+            file("${row.bed_file}", checkIfExists: true),
+            file("${row.snp_list}", checkIfExists: true))}
     ).multiMap {
             run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
@@ -68,31 +68,34 @@ workflow count_fastq {
 
 // Filtering stages. These are done before and after TrimGalore.
 workflow filter_fastq_before {
-    include { filter_fastq as pre_filter_fastq } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_pre)
+    include { filter_fastq as fastqc_before_trimming } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_pre)
     take:
     fastq_list
 
     main:
-    fastq_list | pre_filter_fastq
+    fastqc_before_trimming(fastq_list)
+    result = fastqc_before_trimming.out.fastq_list.join(fastq_list)
 
     emit:
-    result = pre_filter_fastq.out.fastq_list
-    report = pre_filter_fastq.out.report
+    result = result
+    report = fastqc_before_trimming.out.report
 }
 
 // After TrimGalore we also run FastQ-screen to check for contamination
 workflow filter_fastq_after {
-    include { filter_fastq as post_filter_fastq; fastq_screen } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_post)
+    include { filter_fastq as fastqc_after_trimming; fastq_screen } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_post)
 
     take:
     fastq_list
 
     main:
-    post_filter_fastq(fastq_list)
-    fastq_list | fastq_screen
+    fastqc_after_trimming(fastq_list)
+    fastq_screen(fastq_list)
 
-    result = post_filter_fastq.out.fastq_list.join(fastq_screen.out.result)
-    report = post_filter_fastq.out.report
+    result = fastqc_after_trimming.out.fastq_list
+                                      .join(fastq_screen.out.result)
+                                      .join(fastq_list)
+    report = fastqc_after_trimming.out.report
                 .mix(fastq_screen.out.report)
 
     emit:
@@ -100,11 +103,12 @@ workflow filter_fastq_after {
     report = report
 }
 
+// Dummy process to export FastQC files from the pre-trimming run
 process reportFastQC {
     publishDir("${params.report_dir}/preFastQC/${key}/", mode: "copy")
 
     input:
-    tuple key, file(reports)
+    tuple val(key), file(reports)
 
     output:
     file reports
@@ -113,26 +117,10 @@ process reportFastQC {
     "exit 0"
 }
 
-process mergeBeds {
-     publishDir("${params.report_dir}/bed_files/", mode: "copy")
-     label "fastq"
- 
-     input:
-     tuple runs, group_name, antigens, experiments, file(bedfiles), snp_files, bamfiles, index_files
-
-     output:
-     tuple runs, group_name, antigens, experiments, file("${group_name}.bed"), snp_files, bamfiles, index_files
- 
-     script:
-     """
-     cat ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
-     """
-}
-
 workflow {
-    include { trimGalore; create_bam } from "./modules/fastq.nf" 
+    include { trimGalore; create_bam; mergeBeds } from "./modules/fastq.nf"
     include { run_baal } from "./modules/baal.nf"
-    include { multi_qc } from "./modules/qc.nf"  params(report_dir: params.report_dir)
+    include { multi_qc } from "./modules/qc.nf"
 
     // Load CSV file
     import_samples()
@@ -176,7 +164,5 @@ workflow {
            [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
         }
 
-    if (params.run_baal) {
-        bam_files | mergeBeds | run_baal
-    }
+    bam_files | mergeBeds | run_baal
 }

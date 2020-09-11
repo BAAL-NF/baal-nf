@@ -1,6 +1,3 @@
-params.report_dir = "${workflow.launchDir}/test/reports/"
-params.mpiflags = ""
-
 // This is objectively a horrible way to write to a file, and feels silly.
 // I haven't found a better way to do it because nextflow doesn't give access to the working directory
 // when you run an exec command
@@ -8,10 +5,10 @@ process createSampleFile {
     publishDir("${params.report_dir}/samples/", mode:"copy")
 
     input:
-    tuple runs, group_name, antigens, experiments, bed_file, snp_files, bamfiles, index_files
+    tuple val(runs), val(group_name), val(antigens), val(experiments), file(bed_file), file(snp_files), file(bamfiles), file(index_files)
 
     output:
-    tuple group_name, bed_file, snp_files, bamfiles, index_files, file("${group_name}.tsv")
+    tuple val(group_name), file(bed_file), file(snp_files), file(bamfiles), file(index_files), file("${group_name}.tsv")
 
     script:
         output = "cat << EOF > ${group_name}.tsv\n"
@@ -26,14 +23,12 @@ process createSampleFile {
 
 process baalProcessBams {
     label "baal_chip"
-    label "retry_mem"
-
 
     input:
-    tuple group_name, file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
+    tuple val(group_name), file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
 
     output:
-    tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
+    tuple val(group_name), file("process_bams.rds"), file(snp_file), file(bed_file)
 
     script:
     """
@@ -62,17 +57,17 @@ process baalProcessBams {
 
 process baalGetASB {
     publishDir("${params.report_dir}/baal_reports", mode: "copy", pattern: "${group_name}.html")
-    label "retry_mem"
 
     label "baal_chip"
     label "parallel"
     label "bigmem"
 
     input:
-    tuple group_name, file("process_bams.rds"), file(snp_file), file(bed_file)
+    tuple val(group_name), file("process_bams.rds"), file(snp_file), file(bed_file)
+    path report_md, stageAs: "baal_report.Rmd"
 
     output:
-    tuple group_name, file("*.csv"), file(bed_file), emit: asb
+    tuple val(group_name), file("*.csv"), file(bed_file), emit: asb
     file("${group_name}.html")
 
     script:
@@ -92,10 +87,8 @@ process baalGetASB {
             write.csv(report[[group]], paste(group,".csv", sep=""))
     }
 
-    # set the knitr working directory to the current working directory.
-    opts_knit\$set(root.dir = getwd())
     # generate final report
-    knit("${workflow.projectDir}/doc/baal_report.Rmd")
+    knit("baal_report.Rmd")
     render("baal_report.md", output_format="all", output_file="${group_name}")
     """
 }
@@ -105,14 +98,15 @@ process overlapPeaks {
     publishDir("${params.report_dir}/asb", mode: "copy")
 
     input:
-    tuple group_name, file(asb_file), file(bed_file)
+    tuple val(group_name), file(asb_file), file(bed_file)
+    path script
 
     output:
     file("${group_name}.withPeaks.csv")
 
     script:
     """
-    python ${workflow.projectDir}/py/overlap_beds.py ${asb_file} ${bed_file} ${group_name}.withPeaks.csv 
+    python ${script} ${asb_file} ${bed_file} ${group_name}.withPeaks.csv 
     """
 }
 
@@ -121,8 +115,10 @@ workflow run_baal {
     baal_groups
 
     main:
-    baal_groups | createSampleFile | baalProcessBams | baalGetASB 
-    baalGetASB.out.asb | overlapPeaks
+    report_md = channel.from("${workflow.projectDir}/doc/baal_report.Rmd")
+    baal_groups | createSampleFile | baalProcessBams 
+    baalGetASB(baalProcessBams.out, report_md)
+    overlapPeaks(baalGetASB.out.asb, channel.from("${workflow.projectDir}/py/overlap_beds.py"))
 
     emit:
     overlapPeaks.out

@@ -1,37 +1,28 @@
-params.report_dir = "${workflow.launchDir}/test/reports/"
-params.fastqc_conf = ""
-params.fastq_screen_conf = ""
 params.max_acceptable_unmapped = 90
 
 process fastQC {
     label 'fastq'
 
     input:
-    tuple run, file(fastq_files)
+    tuple val(run), file("${run}*.fastq.gz")
+    file fastqc_conf
 
     output:
-    tuple file("*_fastqc.zip"), file("*_fastqc.html"), run, file(fastq_files)
+    tuple val(run), file("*_fastqc.zip"), file("*_fastqc.html")
 
     script:
-    config_args=[]
-
-    if (params.fastqc_conf) {
-        config_args += ["-l", "${params.fastqc_conf}"]
-    }
-
-    config_cmd = config_args.join(" ")
     """
     # FASTQC run ${run}
-    fastqc ${config_cmd} ${fastq_files}
+    fastqc -l ${fastqc_conf} ${run}*.fastq.gz
     """
 }
 
 process getFastqcResult {
     input:
-    tuple file(report_zip), file(html_report), identifier, fastq_files
+    tuple val(run), file(report_zip), file(html_report)
 
     output:
-    tuple stdout, identifier, fastq_files
+    tuple stdout, val(run)
 
     script:
     script = ""
@@ -49,38 +40,42 @@ workflow filter_fastq {
     fastq_list
 
     main:
-    result = fastQC(fastq_list) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
+    ch_fastqc_conf = file(params.fastqc_conf)
+    filtered = fastQC(fastq_list, ch_fastqc_conf) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
 
     report = fastQC.out.map {
-        zip, html, run, fastq_files -> [run, [zip, html].flatten()]
+        run, zip, html -> [run, [zip, html].flatten()]
     }
 
     emit:
-      fastq_list = result
+      fastq_list = filtered
       report = report
 }
 
 
 process fastqScreen {
     label 'fastq'
+    label 'parallel'
 
     input:
-    tuple run, file(trimmed)
-
+    tuple val(run), path("${run}*.fastq.gz")
+    file fastq_screen_conf
     output:
-    tuple run, file("*screen.txt"), emit: screening_result
-    tuple run, file('*screen*'), emit: report
+    tuple val(run), file("*screen.txt"), emit: screening_result
+    tuple val(run), file('*screen*'), emit: report
 
     script:
-    options = ['--aligner', 'bowtie2']
-
-    if (params.fastq_screen_conf){
-        options += ["--conf", "${params.fastq_screen_conf}"]
+    options = ["--aligner", "bowtie2"]
+    options += ["--conf", "${params.fastq_screen_conf}"]
+    
+    if (task.cpus > 1) {
+        options += ["--threads", "${task.cpus}"]
     }
+    
     optargs = options.join(" ")
 
     """
-    FILES=(${trimmed})
+    FILES=(${run}*.fastq.gz)
     case \${#FILES[@]} in
 
         1)
@@ -102,10 +97,10 @@ process getFastqScreenResult {
     label "python"
 
     input:
-    tuple run, file(screening_result)
+    tuple val(run), file(screening_result)
 
     output:
-    tuple run, stdout
+    tuple val(run), stdout
 
     script:
     """
@@ -130,7 +125,8 @@ workflow fastq_screen {
     fastq_ch
 
     main:
-    screen = fastqScreen(fastq_ch)
+    ch_fastq_screen_conf = file(params.fastq_screen_conf)
+    screen = fastqScreen(fastq_ch, ch_fastq_screen_conf)
     result = getFastqScreenResult(screen.screening_result) | filter { it[1] =~ /pass/ } | map { it -> it [0] }
 
     emit:
@@ -144,7 +140,7 @@ process multiQC {
 
     label "fastq"
     input:
-    tuple key, file(results)
+    tuple val(key), file(results)
 
     output:
     file("multiqc_*")
