@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [[0.3.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.2.1...0.3.0) - 28.8.2020
+
 ### Added
 - Support for automatic staging of the iGenomes hg19 genome
 - Pipeline reporting is now part of the reports by default
