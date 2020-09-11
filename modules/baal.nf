@@ -115,10 +115,10 @@ workflow run_baal {
     baal_groups
 
     main:
-    report_md = channel.from("${workflow.projectDir}/doc/baal_report.Rmd")
+    report_md = file("${projectDir}/doc/baal_report.Rmd")
     baal_groups | createSampleFile | baalProcessBams 
     baalGetASB(baalProcessBams.out, report_md)
-    overlapPeaks(baalGetASB.out.asb, channel.from("${workflow.projectDir}/py/overlap_beds.py"))
+    overlapPeaks(baalGetASB.out.asb, channel.from("${projectDir}/py/overlap_beds.py"))
 
     emit:
     overlapPeaks.out
