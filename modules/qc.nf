@@ -71,6 +71,7 @@ process fastqScreen {
     if (task.cpus > 1) {
         options += ["--threads", "${task.cpus}"]
     }
+    
     optargs = options.join(" ")
 
     """
