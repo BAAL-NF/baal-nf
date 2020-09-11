@@ -6,6 +6,11 @@ if (params.sample_file.isEmpty()) {
     exit 1
 }
 
+if (params.fastq_screen_conf.isEmpty()) {
+    println("Error: missing fastq screen configuration file")
+    exit 1
+}
+
 // Import a CSV file with all sample identifiers
 workflow import_samples {
     main:

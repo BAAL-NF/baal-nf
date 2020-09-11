@@ -91,8 +91,9 @@ process mergeBeds {
      tuple val(runs), val(group_name), val(antigens), val(experiments), file("${group_name}.bed"), file(snp_files), file(bamfiles), file(index_files)
  
      script:
+     cat_cmd = ("${bedfiles}".endsWith(".gz")) ? "zcat" : "cat"
      """
-     cat ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
+     ${cat_cmd} ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
      """
 }
 
