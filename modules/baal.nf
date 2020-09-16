@@ -2,10 +2,11 @@
 // I haven't found a better way to do it because nextflow doesn't give access to the working directory
 // when you run an exec command
 process createSampleFile {
-    publishDir("${params.report_dir}/samples/", mode:"copy")
+    publishDir("${params.report_dir}/samples/", mode:'copy')
 
     input:
-    tuple val(runs), val(group_name), val(antigens), val(experiments), file(bed_file), file(snp_files), file(bamfiles), file(index_files)
+    tuple(val(runs), val(group_name), val(antigens), val(experiments),
+          file(bed_file), file(snp_files), file(bamfiles), file(index_files))
 
     output:
     tuple val(group_name), file(bed_file), file(snp_files), file(bamfiles), file(index_files), file("${group_name}.tsv")
@@ -13,22 +14,24 @@ process createSampleFile {
     script:
         output = "cat << EOF > ${group_name}.tsv\n"
         output += "group_name\ttarget\treplicate_number\tbam_name\tbed_name\tsampleID\n"
-        0.upto(runs.size()-1, {
-            replicate = it + 1
-            output += "${group_name}\t${antigens[it]}\t${replicate}\t${bamfiles[it].name}\t${bed_file.name}\t${runs[it]}\n"
-        })
-        output += "EOF\n"
+        0.upto(runs.size() - 1) {
+            i ->
+            replicate = i + 1
+            output +=
+                "${group_name}\t${antigens[i]}\t${replicate}\t${bamfiles[i].name}\t${bed_file.name}\t${runs[i]}\n"
+        }
+        output += 'EOF\n'
         output
 }
 
 process baalProcessBams {
-    label "baal_chip"
+    label 'baal_chip'
 
     input:
     tuple val(group_name), file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
 
     output:
-    tuple val(group_name), file("process_bams.rds"), file(snp_file), file(bed_file)
+    tuple val(group_name), file('process_bams.rds'), file(snp_file), file(bed_file)
 
     script:
     """
@@ -39,35 +42,35 @@ process baalProcessBams {
     data(pickrell2011cov1_hg19)
     data(UniqueMappability50bp_hg19)
 
-    samplesheet <- "${sample_file}"
+    samplesheet <- '${sample_file}'
 
-    hets <- c("${group_name}" = "${snp_file}")
+    hets <- c('${group_name}' = '${snp_file}')
 
-    res <- new("BaalChIP", samplesheet=samplesheet, hets=hets)
+    res <- new('BaalChIP', samplesheet=samplesheet, hets=hets)
     res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=TRUE)
     res <- QCfilter(res,
-                    RegionsToFilter=list("blacklist"=blacklist_hg19,
-                                         "highcoverage"=pickrell2011cov1_hg19),
-                    RegionsToKeep=list("UniqueMappability"=UniqueMappability50bp_hg19))
+                    RegionsToFilter=list('blacklist'=blacklist_hg19,
+                                         'highcoverage'=pickrell2011cov1_hg19),
+                    RegionsToKeep=list('UniqueMappability'=UniqueMappability50bp_hg19))
     res <- mergePerGroup(res)
     res <- filter1allele(res)
-    saveRDS(res, file="process_bams.rds")
+    saveRDS(res, file='process_bams.rds')
     """
 }
 
 process baalGetASB {
-    publishDir("${params.report_dir}/baal_reports", mode: "copy", pattern: "${group_name}.html")
+    publishDir("${params.report_dir}/baal_reports", mode: 'copy', pattern: "${group_name}.html")
 
-    label "baal_chip"
-    label "parallel"
-    label "bigmem"
+    label 'baal_chip'
+    label 'parallel'
+    label 'bigmem'
 
     input:
-    tuple val(group_name), file("process_bams.rds"), file(snp_file), file(bed_file)
-    path report_md, stageAs: "baal_report.Rmd"
+    tuple val(group_name), file('process_bams.rds'), file(snp_file), file(bed_file)
+    path report_md, stageAs: 'baal_report.Rmd'
 
     output:
-    tuple val(group_name), file("*.csv"), file(bed_file), emit: asb
+    tuple val(group_name), file('*.csv'), file(bed_file), emit: asb
     file("${group_name}.html")
 
     script:
@@ -94,8 +97,8 @@ process baalGetASB {
 }
 
 process overlapPeaks {
-    label "python"
-    publishDir("${params.report_dir}/asb", mode: "copy")
+    label 'python'
+    publishDir("${params.report_dir}/asb", mode: 'copy')
 
     input:
     tuple val(group_name), file(asb_file), file(bed_file)
@@ -106,7 +109,7 @@ process overlapPeaks {
 
     script:
     """
-    python ${script} ${asb_file} ${bed_file} ${group_name}.withPeaks.csv 
+    python ${script} ${asb_file} ${bed_file} ${group_name}.withPeaks.csv
     """
 }
 
@@ -116,7 +119,7 @@ workflow run_baal {
 
     main:
     report_md = file("${projectDir}/doc/baal_report.Rmd")
-    baal_groups | createSampleFile | baalProcessBams 
+    baal_groups | createSampleFile | baalProcessBams
     baalGetASB(baalProcessBams.out, report_md)
     overlapPeaks(baalGetASB.out.asb, channel.from("${projectDir}/py/overlap_beds.py"))
 

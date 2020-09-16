@@ -8,7 +8,7 @@ process fastQC {
     file fastqc_conf
 
     output:
-    tuple val(run), file("*_fastqc.zip"), file("*_fastqc.html")
+    tuple val(run), file('*_fastqc.zip'), file('*_fastqc.html')
 
     script:
     """
@@ -25,7 +25,7 @@ process getFastqcResult {
     tuple stdout, val(run)
 
     script:
-    script = ""
+    script = ''
     for (report_file in report_zip) {
         script += """
                   unzip ${report_file} ${report_file.baseName}/summary.txt >/dev/null
@@ -41,17 +41,19 @@ workflow filter_fastq {
 
     main:
     ch_fastqc_conf = file(params.fastqc_conf)
-    filtered = fastQC(fastq_list, ch_fastqc_conf) | getFastqcResult | filter{ it[0].isEmpty() } | map{ it -> it[1..-1] }
+    fastq_list = fastQC(fastq_list, ch_fastqc_conf) |
+                 getFastqcResult |
+                 filter { result -> result[0].isEmpty() } |
+                 map { result -> result[1..-1] }
 
     report = fastQC.out.map {
         run, zip, html -> [run, [zip, html].flatten()]
     }
 
     emit:
-      fastq_list = filtered
-      report = report
+      fastq_list
+      report
 }
-
 
 process fastqScreen {
     label 'fastq'
@@ -61,18 +63,18 @@ process fastqScreen {
     tuple val(run), path("${run}*.fastq.gz")
     file fastq_screen_conf
     output:
-    tuple val(run), file("*screen.txt"), emit: screening_result
+    tuple val(run), file('*screen.txt'), emit: screening_result
     tuple val(run), file('*screen*'), emit: report
 
     script:
-    options = ["--aligner", "bowtie2"]
-    options += ["--conf", "${params.fastq_screen_conf}"]
-    
+    options = ['--aligner', 'bowtie2']
+    options += ['--conf', "${params.fastq_screen_conf}"]
+
     if (task.cpus > 1) {
-        options += ["--threads", "${task.cpus}"]
+        options += ['--threads', "${task.cpus}"]
     }
-    
-    optargs = options.join(" ")
+
+    optargs = options.join(' ')
 
     """
     FILES=(${run}*.fastq.gz)
@@ -94,7 +96,7 @@ process fastqScreen {
 }
 
 process getFastqScreenResult {
-    label "python"
+    label 'python'
 
     input:
     tuple val(run), file(screening_result)
@@ -113,11 +115,12 @@ process getFastqScreenResult {
     result = True
     for file in files:
         screening = pd.read_csv(file, sep='\t', skiprows=1, skipfooter=2, engine='python')
-        result = result and (screening[screening.Genome != "Human"]["%Unmapped"].min() > ${params.max_acceptable_unmapped})
+        if (screening[screening.Genome != "Human"]["%Unmapped"].min() < ${params.max_acceptable_unmapped}):
+            result = False
+            break
 
     print("pass" if result else "fail")
     """
-
 }
 
 workflow fastq_screen {
@@ -127,23 +130,24 @@ workflow fastq_screen {
     main:
     ch_fastq_screen_conf = file(params.fastq_screen_conf)
     screen = fastqScreen(fastq_ch, ch_fastq_screen_conf)
-    result = getFastqScreenResult(screen.screening_result) | filter { it[1] =~ /pass/ } | map { it -> it [0] }
+    result = getFastqScreenResult(screen.screening_result) |
+             filter { result -> result[1] =~ /pass/ } |
+             map { result -> result [0] }
 
     emit:
-    result = result
+    result
     report = screen.report
 }
 
-
 process multiQC {
-    publishDir("${params.report_dir}/multiQC/${key}", mode: "move")
+    publishDir("${params.report_dir}/multiQC/${key}", mode: 'move')
 
-    label "fastq"
+    label 'fastq'
     input:
     tuple val(key), file(results)
 
     output:
-    file("multiqc_*")
+    file('multiqc_*')
 
     script:
     """

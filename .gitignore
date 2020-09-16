@@ -1,3 +1,4 @@
 work
 .nextflow*
 test/*
+.groovylintrc.json

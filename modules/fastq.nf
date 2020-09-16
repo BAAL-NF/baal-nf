@@ -10,7 +10,7 @@ process trimGalore {
     tuple val(run), file('*report*'), emit: report
 
     script:
-    extra_args = ""
+    extra_args = ''
     if (task.cpus > 1) {
         extra_args += "-j ${task.cpus}"
     }
@@ -38,7 +38,7 @@ process createBam {
     label 'bigmem'
     label 'parallel'
 
-    publishDir("${params.report_dir}/logs/bowtie2/", mode: "copy", pattern: "${run}.log")    
+    publishDir("${params.report_dir}/logs/bowtie2/", mode: 'copy', pattern: "${run}.log")
     errorStrategy 'retry'
     maxRetries 3
 
@@ -48,11 +48,11 @@ process createBam {
 
     output:
     tuple val(run), file("${run}_dedup.bam"), emit: bamfile
-    tuple val(run), file("**.metrics"), emit: report
+    tuple val(run), file('**.metrics'), emit: report
     file "${run}.log"
 
     script:
-    extra_args = ""
+    extra_args = ''
     if (task.cpus > 1) {
         extra_args += "-p ${task.cpus}"
     }
@@ -77,21 +77,22 @@ process createBam {
     samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
     picard MarkDuplicates I="${run}.bam" O="${run}_dedup.bam" M="${run}.metrics"
     """
-
 }
 
 process mergeBeds {
-     publishDir("${params.report_dir}/bed_files/", mode: "copy")
-     label "fastq"
- 
+     publishDir("${params.report_dir}/bed_files/", mode: 'copy')
+     label 'fastq'
+
      input:
-     tuple val(runs), val(group_name), val(antigens), val(experiments), file(bedfiles), file(snp_files), file(bamfiles), file(index_files)
+     tuple(val(runs), val(group_name), val(antigens), val(experiments),
+           file(bedfiles), file(snp_files), file(bamfiles), file(index_files))
 
      output:
-     tuple val(runs), val(group_name), val(antigens), val(experiments), file("${group_name}.bed"), file(snp_files), file(bamfiles), file(index_files)
- 
+     tuple(val(runs), val(group_name), val(antigens), val(experiments),
+           file("${group_name}.bed"), file(snp_files), file(bamfiles), file(index_files))
+
      script:
-     cat_cmd = ("${bedfiles}".endsWith(".gz")) ? "zcat" : "cat"
+     cat_cmd = ("${bedfiles}".endsWith('.gz')) ? 'zcat' : 'cat'
      """
      ${cat_cmd} ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
      """
@@ -115,7 +116,7 @@ workflow create_bam {
     fastq_files
 
     main:
-    index_ch = file(params.bowtie2_index, type: "dir")
+    index_ch = file(params.bowtie2_index, type: 'dir')
     createBam(fastq_files, index_ch)
     createBam.out.bamfile | index
 
