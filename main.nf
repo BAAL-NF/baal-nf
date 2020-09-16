@@ -1,13 +1,13 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
+nextflow.enable.dsl = 2
 
 if (params.sample_file.isEmpty()) {
-    println("Error: no sample file provided")
+    println('Error: no sample file provided')
     exit 1
 }
 
 if (params.fastq_screen_conf.isEmpty()) {
-    println("Error: missing fastq screen configuration file")
+    println('Error: missing fastq screen configuration file')
     exit 1
 }
 
@@ -17,21 +17,23 @@ workflow import_samples {
     Channel
         .fromPath(params.sample_file, checkIfExists: true)
         .splitCsv(header:true)
-        .map({row -> tuple(
-            row.run,
-            "${row.cell_line}_${row.transcription_factor}",
-            row.transcription_factor,
-            row.experiment,
-            (([row.fastq_1, row.fastq_2] - "").collect { path -> file(path, checkIfExists: true) }),
-            file("${row.bed_file}", checkIfExists: true),
-            file("${row.snp_list}", checkIfExists: true))}
-    ).multiMap {
+        .map {
+            row -> tuple(
+                row.run,
+                "${row.cell_line}_${row.transcription_factor}",
+                row.transcription_factor,
+                row.experiment,
+                ([row.fastq_1, row.fastq_2] - '').collect {
+                    path -> file(path, checkIfExists: true) 
+                },
+                file("${row.bed_file}", checkIfExists: true),
+                file("${row.snp_list}", checkIfExists: true))
+        } .multiMap {
             run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
             metadata: [run, group, transcription_factor, experiment, bed_file, snp_file]
         }
-        .set{ srr_ch }
-
+        .set { srr_ch }
 
     emit:
     fastq = srr_ch.fastq
@@ -49,15 +51,16 @@ workflow count_fastq {
     metadata
         .join(fastq_files)
         .groupTuple(by: 1)
-        .map({ runs, tag, transcription_factor, experiments, bed_files, snp_files, fastq_files ->
+        .map {
+            runs, tag, transcription_factor, experiments, bed_files, snp_files, fastq_files ->
             num_samples = runs.size()
             [ runs, groupKey(tag, num_samples), transcription_factor, experiments, bed_files, snp_files, fastq_files ]
-        })
+        }
         .transpose()
         .multiMap {
-          run, key, transcription_factor, experiment, bed_file, snp_file, fastq_files ->
-          fastq: [ run, fastq_files ]
-          metadata: [ run, key, transcription_factor, experiment, bed_file, snp_file ]
+            run, key, transcription_factor, experiment, bed_file, snp_file, fastq_files ->
+            fastq: [ run, fastq_files ]
+            metadata: [ run, key, transcription_factor, experiment, bed_file, snp_file ]
         }
         .set { filtered_data }
 
@@ -68,7 +71,8 @@ workflow count_fastq {
 
 // Filtering stages. These are done before and after TrimGalore.
 workflow filter_fastq_before {
-    include { filter_fastq as fastqc_before_trimming } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_pre)
+    include { filter_fastq as fastqc_before_trimming } from './modules/qc.nf' \
+        addParams(fastqc_conf: params.fastqc_conf_pre)
     take:
     fastq_list
 
@@ -77,13 +81,14 @@ workflow filter_fastq_before {
     result = fastqc_before_trimming.out.fastq_list.join(fastq_list)
 
     emit:
-    result = result
+    result
     report = fastqc_before_trimming.out.report
 }
 
 // After TrimGalore we also run FastQ-screen to check for contamination
 workflow filter_fastq_after {
-    include { filter_fastq as fastqc_after_trimming; fastq_screen } from "./modules/qc.nf" addParams(fastqc_conf: params.fastqc_conf_post)
+    include { filter_fastq as fastqc_after_trimming; fastq_screen } from './modules/qc.nf' \
+        addParams(fastqc_conf: params.fastqc_conf_post)
 
     take:
     fastq_list
@@ -99,13 +104,13 @@ workflow filter_fastq_after {
                 .mix(fastq_screen.out.report)
 
     emit:
-    result = result
-    report = report
+    result
+    report
 }
 
 // Dummy process to export FastQC files from the pre-trimming run
 process reportFastQC {
-    publishDir("${params.report_dir}/preFastQC/${key}/", mode: "copy")
+    publishDir("${params.report_dir}/preFastQC/${key}/", mode: 'copy')
 
     input:
     tuple val(key), file(reports)
@@ -114,13 +119,13 @@ process reportFastQC {
     file reports
 
     script:
-    "exit 0"
+    'exit 0'
 }
 
 workflow {
-    include { trimGalore; create_bam; mergeBeds } from "./modules/fastq.nf"
-    include { run_baal } from "./modules/baal.nf"
-    include { multi_qc } from "./modules/qc.nf"
+    include { trimGalore; create_bam; mergeBeds } from './modules/fastq.nf'
+    include { run_baal } from './modules/baal.nf'
+    include { multi_qc } from './modules/qc.nf'
 
     // Load CSV file
     import_samples()
@@ -130,8 +135,11 @@ workflow {
 
     import_samples.out.metadata
         .join(filter_fastq_before.out.report)
-        .groupTuple(by:1)
-        .map{run, group, transcription_factor, experiment, bed_file, snp_file, reports -> [group, reports.flatten()]} | reportFastQC
+        .groupTuple(by: 1)
+        .map {
+            run, group, transcription_factor, experiment, bed_file, snp_file, reports ->
+            [group, reports.flatten()]
+        } | reportFastQC
 
     // Adapter trimming
     trimGalore(filter_fastq_before.out.result)
@@ -160,8 +168,8 @@ workflow {
                 .join(create_bam.out.bamfile)
                 .groupTuple(by: 1)
         .map {
-                   runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files -> 
-           [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
+                   runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files ->
+            [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
         }
 
     bam_files | mergeBeds | run_baal
