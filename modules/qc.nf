@@ -1,3 +1,4 @@
+// Initial QC prior to processing
 params.max_acceptable_unmapped = 90
 
 process fastQC {

@@ -1,3 +1,4 @@
+// process fastq files and prepare them for use in BaalChIP
 process trimGalore {
     label 'fastq'
     label 'parallel'
@@ -84,12 +85,10 @@ process mergeBeds {
      label 'fastq'
 
      input:
-     tuple(val(runs), val(group_name), val(antigens), val(experiments),
-           file(bedfiles), file(snp_files), file(bamfiles), file(index_files))
+     tuple(val(group_name), file(bedfiles))
 
      output:
-     tuple(val(runs), val(group_name), val(antigens), val(experiments),
-           file("${group_name}.bed"), file(snp_files), file(bamfiles), file(index_files))
+     tuple(val(group_name), file("${group_name}.bed"))
 
      script:
      cat_cmd = ("${bedfiles}".endsWith('.gz')) ? 'zcat' : 'cat'

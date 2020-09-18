@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Renamed main script to `main.nf` to conform with nf-core guidelines
 - Linted using groovyLint
+- Add enrichment analysis using GAT and then ensembl annotations
 
 ## [[0.3.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.2.1...0.3.0) - 28.8.2020
 
