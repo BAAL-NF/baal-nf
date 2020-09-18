@@ -1,3 +1,6 @@
+// Run BaalChIP ASB detection
+
+// Create the baalChIP sample file
 // This is objectively a horrible way to write to a file, and feels silly.
 // I haven't found a better way to do it because nextflow doesn't give access to the working directory
 // when you run an exec command
@@ -5,8 +8,8 @@ process createSampleFile {
     publishDir("${params.report_dir}/samples/", mode:'copy')
 
     input:
-    tuple(val(runs), val(group_name), val(antigens), val(experiments),
-          file(bed_file), file(snp_files), file(bamfiles), file(index_files))
+    tuple(val(group_name), file(bed_file), val(runs), val(antigens), val(experiments),
+          file(snp_files), file(bamfiles), file(index_files))
 
     output:
     tuple val(group_name), file(bed_file), file(snp_files), file(bamfiles), file(index_files), file("${group_name}.tsv")
@@ -96,33 +99,14 @@ process baalGetASB {
     """
 }
 
-process overlapPeaks {
-    label 'python'
-    publishDir("${params.report_dir}/asb", mode: 'copy')
-
-    input:
-    tuple val(group_name), file(asb_file), file(bed_file)
-    path script
-
-    output:
-    file("${group_name}.withPeaks.csv")
-
-    script:
-    """
-    python ${script} ${asb_file} ${bed_file} ${group_name}.withPeaks.csv
-    """
-}
-
 workflow run_baal {
     take:
     baal_groups
 
     main:
-    report_md = file("${projectDir}/doc/baal_report.Rmd")
     baal_groups | createSampleFile | baalProcessBams
-    baalGetASB(baalProcessBams.out, report_md)
-    overlapPeaks(baalGetASB.out.asb, channel.from("${projectDir}/py/overlap_beds.py"))
+    baalGetASB(baalProcessBams.out, file("${projectDir}/doc/baal_report.Rmd"))
 
     emit:
-    overlapPeaks.out
+    baalGetASB.out.asb
 }

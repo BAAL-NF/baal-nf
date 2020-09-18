@@ -126,6 +126,7 @@ workflow {
     include { trimGalore; create_bam; mergeBeds } from './modules/fastq.nf'
     include { run_baal } from './modules/baal.nf'
     include { multi_qc } from './modules/qc.nf'
+    include { process_results } from './modules/analysis.nf'
 
     // Load CSV file
     import_samples()
@@ -164,13 +165,19 @@ workflow {
     multi_qc(import_samples.out.metadata, reports)
 
     // Regroup the bam files with their associated metadata and run baal chip
-    bam_files = count_fastq.out.metadata
-                .join(create_bam.out.bamfile)
-                .groupTuple(by: 1)
-        .map {
-                   runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files ->
-            [runs, group_name, antigens, experiments, bedfiles.unique(), snp_files.unique(), bamfiles, index_files]
-        }
+    count_fastq.out.metadata
+        .join(create_bam.out.bamfile)
+        .groupTuple(by: 1)
+        .multiMap {
+            runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files -> 
+            
+            snp_files : [group_name, snp_files.unique()]
+            bed_files : [group_name, bedfiles.unique()]
+            baal_files : [group_name, runs, antigens, experiments, snp_files.unique(), bamfiles, index_files] }
+        .set { group_ch }
 
-    bam_files | mergeBeds | run_baal
+    mergeBeds(group_ch.bed_files)
+    run_baal(mergeBeds.out.join(group_ch.baal_files))
+
+    process_results(run_baal.out, group_ch.snp_files)
 }
