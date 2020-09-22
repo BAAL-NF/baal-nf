@@ -18,6 +18,7 @@ process overlapPeaks {
 
 process makeGatBedFiles {
     label 'python'
+    errorStrategy { task.exitStatus == 65 ? 'ignore' : 'terminate' }
 
     input:
     tuple val(group), file(asb_file), file(snp_file)
@@ -35,7 +36,7 @@ process makeGatBedFiles {
 process runGat {
     label 'python'
     publishDir("${params.report_dir}/enrichment/", mode: "copy")
-    
+
     input:
     tuple val(group), file(foreground), file(background)
     file annotations
@@ -59,7 +60,7 @@ workflow process_results {
     overlapPeaks(baal_results, file("${projectDir}/py/overlap_beds.py"))
 
     if (params.run_gat){  
-        makeGatBedFiles(overlapPeaks.out.join(snp_files), 
+        makeGatBedFiles(overlapPeaks.out.join(snp_files),
                         file("${projectDir}/py/make_gat_bedfiles.py"))
         runGat(makeGatBedFiles.out, file("${params.annotation_file}"))
     }

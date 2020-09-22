@@ -1,4 +1,6 @@
 import argparse
+import os
+import sys
 
 import pandas as pd
 
@@ -47,11 +49,17 @@ if __name__ == "__main__":
         'snp_file', help='file containing all het SNPs in the cell line')
     args = parser.parse_args()
 
-    sig_snps = fetch_asb_set(args.baal_file)
     all_snps = prepare_for_gat(pd.read_csv(args.snp_file,
                                            skiprows=1,
                                            sep="\t",
                                            names=["rsid", "chrom",
                                                   "pos", "ref", "alt", "raf"],
                                            dtype={"pos": int}))
+    sig_snps = fetch_asb_set(args.baal_file)
+
+    # No significant SNPs were found. This is not necessarily an error
+    # but should produce no GAT analysis file.
+    if len(sig_snps) == 0:
+        sys.exit(os.EX_DATAERR)
+
     create_files(sig_snps, all_snps)
