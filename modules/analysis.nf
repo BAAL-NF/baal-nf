@@ -18,6 +18,8 @@ process overlapPeaks {
 
 process makeGatBedFiles {
     label 'python'
+    // the script will exit with status EX_DATAERR if
+    // the output from BaalChIP contains no significant SNPs
     errorStrategy { task.exitStatus == 65 ? 'ignore' : 'terminate' }
 
     input:

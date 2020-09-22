@@ -50,6 +50,8 @@ baal-nf requires a listing of input files in CSV format, with the following name
 | bed_file | `/scratch/mydata/bedfiles/GM12878_ESR1.bed` | Path to bed file containing peak calls for the sequencing run |
 | snp_list | `/scratch/het_snps/GM12878_hetSNP.txt` | TSV file containing het SNPs and RAF in the [format expected by BaalChIP](https://github.com/InesdeSantiago/BaalChIP/blob/master/inst/test/GM12891_hetSNP.txt) |
 
+All files may be either local paths, HTTP URLs or S3 uris. Nextflow will automatically stage any files not present in the local filesystem.
+
 ## Configuration options
 
 Some configuration can be set using nextflow's usual custom parameters, either on the command line using double-dashed command line options, or in a nextflow configuration file in the `params` scope. The full list of configuration options is as follows
@@ -63,10 +65,10 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 | fastqc_conf_pre | `"${workflow.projectDir}/data/before_limits.txt"` | `fastqc` configuration used for pre-screening| No
 | fastqc_conf_post | `"${workflow.projectDir}/data/after_limits.txt"`| `fastqc` configuration used after adapter trimming | No
 | report_dir | `"${workflow.launchDir}/reports/"`| Directory to place all reports in, defaults to a subfolder named `reports` in the launch directory. | No
+| run_gat | `true` | Whether to run GAT enrichment analysis against the ENSEMBL genome annotations | No
 
 # ToDo
 
-- Automatic fetching of fastq files from the ENA archive
 - Automatic export to SQL or SQLite database
 - Fix singularity/docker mount points for fastq screen so pipeline can run without the user having to configure mount points
 - Configurable genomes
