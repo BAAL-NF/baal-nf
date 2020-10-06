@@ -4,11 +4,11 @@ process trimGalore {
     label 'parallel'
 
     input:
-    tuple val(run), file("${run}*.fastq.gz")
+    tuple val(run), path("${run}*.fastq.gz")
 
     output:
-    tuple val(run), file("${run}_tg*"), emit: trimmed_fastq
-    tuple val(run), file('*report*'), emit: report
+    tuple val(run), path("${run}_tg*"), emit: trimmed_fastq
+    tuple val(run), path('*report*'), emit: report
 
     script:
     extra_args = ''
@@ -44,12 +44,12 @@ process createBam {
     maxRetries 3
 
     input:
-    tuple val(run), file(trimmed)
+    tuple val(run), path(trimmed)
     file index_files
 
     output:
-    tuple val(run), file("${run}_dedup.bam"), emit: bamfile
-    tuple val(run), file('**.metrics'), emit: report
+    tuple val(run), path("${run}_dedup.bam"), emit: bamfile
+    tuple val(run), path('**.metrics'), emit: report
     file "${run}.log"
 
     script:
@@ -85,10 +85,10 @@ process mergeBeds {
      label 'fastq'
 
      input:
-     tuple(val(group_name), file(bedfiles))
+     tuple(val(group_name), path(bedfiles))
 
      output:
-     tuple(val(group_name), file("${group_name}.bed"))
+     tuple(val(group_name), path("${group_name}.bed"))
 
      script:
      cat_cmd = ("${bedfiles}".endsWith('.gz')) ? 'zcat' : 'cat'
@@ -100,10 +100,10 @@ process mergeBeds {
 process index {
     label 'fastq'
     input:
-    tuple val(run), file(bamfile)
+    tuple val(run), path(bamfile)
 
     output:
-    tuple val(run), file(bamfile), file("${bamfile}.bai")
+    tuple val(run), path(bamfile), path("${bamfile}.bai")
 
     """
     samtools index ${bamfile}
@@ -115,7 +115,7 @@ workflow create_bam {
     fastq_files
 
     main:
-    index_ch = file(params.bowtie2_index, type: 'dir')
+    index_ch = file(params.bowtie2_index, type: 'dir', checkIfExists: true)
     createBam(fastq_files, index_ch)
     createBam.out.bamfile | index
 

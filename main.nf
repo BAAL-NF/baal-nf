@@ -22,16 +22,15 @@ workflow import_samples {
                 row.run,
                 "${row.cell_line}_${row.transcription_factor}",
                 row.transcription_factor,
-                row.experiment,
                 ([row.fastq_1, row.fastq_2] - '').collect {
                     path -> file(path, checkIfExists: true) 
                 },
                 file("${row.bed_file}", checkIfExists: true),
                 file("${row.snp_list}", checkIfExists: true))
         } .multiMap {
-            run, group, transcription_factor, experiment, fastq_files, bed_file, snp_file ->
+            run, group, transcription_factor, fastq_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
-            metadata: [run, group, transcription_factor, experiment, bed_file, snp_file]
+            metadata: [run, group, transcription_factor, bed_file, snp_file]
         }
         .set { srr_ch }
 
@@ -52,15 +51,15 @@ workflow count_fastq {
         .join(fastq_files)
         .groupTuple(by: 1)
         .map {
-            runs, tag, transcription_factor, experiments, bed_files, snp_files, fastq_files ->
+            runs, tag, transcription_factor, bed_files, snp_files, fastq_files ->
             num_samples = runs.size()
-            [ runs, groupKey(tag, num_samples), transcription_factor, experiments, bed_files, snp_files, fastq_files ]
+            [ runs, groupKey(tag, num_samples), transcription_factor, bed_files, snp_files, fastq_files ]
         }
         .transpose()
         .multiMap {
-            run, key, transcription_factor, experiment, bed_file, snp_file, fastq_files ->
+            run, key, transcription_factor, bed_file, snp_file, fastq_files ->
             fastq: [ run, fastq_files ]
-            metadata: [ run, key, transcription_factor, experiment, bed_file, snp_file ]
+            metadata: [ run, key, transcription_factor, bed_file, snp_file ]
         }
         .set { filtered_data }
 
@@ -113,7 +112,7 @@ process reportFastQC {
     publishDir("${params.report_dir}/preFastQC/${key}/", mode: 'copy')
 
     input:
-    tuple val(key), file(reports)
+    tuple val(key), path(reports)
 
     output:
     file reports
@@ -138,7 +137,7 @@ workflow {
         .join(filter_fastq_before.out.report)
         .groupTuple(by: 1)
         .map {
-            run, group, transcription_factor, experiment, bed_file, snp_file, reports ->
+            run, group, transcription_factor, bed_file, snp_file, reports ->
             [group, reports.flatten()]
         } | reportFastQC
 
@@ -169,11 +168,11 @@ workflow {
         .join(create_bam.out.bamfile)
         .groupTuple(by: 1)
         .multiMap {
-            runs, group_name, antigens, experiments, bedfiles, snp_files, bamfiles, index_files -> 
+            runs, group_name, antigens, bedfiles, snp_files, bamfiles, index_files -> 
             
             snp_files : [group_name, snp_files.unique()]
             bed_files : [group_name, bedfiles.unique()]
-            baal_files : [group_name, runs, antigens, experiments, snp_files.unique(), bamfiles, index_files] }
+            baal_files : [group_name, runs, antigens, snp_files.unique(), bamfiles, index_files] }
         .set { group_ch }
 
     mergeBeds(group_ch.bed_files)
