@@ -5,11 +5,11 @@ process fastQC {
     label 'fastq'
 
     input:
-    tuple val(run), file("${run}*.fastq.gz")
+    tuple val(run), path("${run}*.fastq.gz")
     file fastqc_conf
 
     output:
-    tuple val(run), file('*_fastqc.zip'), file('*_fastqc.html')
+    tuple val(run), path('*_fastqc.zip'), path('*_fastqc.html')
 
     script:
     """
@@ -20,7 +20,7 @@ process fastQC {
 
 process getFastqcResult {
     input:
-    tuple val(run), file(report_zip), file(html_report)
+    tuple val(run), path(report_zip), path(html_report)
 
     output:
     tuple stdout, val(run)
@@ -41,7 +41,7 @@ workflow filter_fastq {
     fastq_list
 
     main:
-    ch_fastqc_conf = file(params.fastqc_conf)
+    ch_fastqc_conf = file(params.fastqc_conf, checkIfExists: true)
     fastq_list = fastQC(fastq_list, ch_fastqc_conf) |
                  getFastqcResult |
                  filter { result -> result[0].isEmpty() } |
@@ -64,8 +64,8 @@ process fastqScreen {
     tuple val(run), path("${run}*.fastq.gz")
     file fastq_screen_conf
     output:
-    tuple val(run), file('*screen.txt'), emit: screening_result
-    tuple val(run), file('*screen*'), emit: report
+    tuple val(run), path('*screen.txt'), emit: screening_result
+    tuple val(run), path('*screen*'), emit: report
 
     script:
     options = ['--aligner', 'bowtie2']
@@ -100,7 +100,7 @@ process getFastqScreenResult {
     label 'python'
 
     input:
-    tuple val(run), file(screening_result)
+    tuple val(run), path(screening_result)
 
     output:
     tuple val(run), stdout
@@ -129,7 +129,7 @@ workflow fastq_screen {
     fastq_ch
 
     main:
-    ch_fastq_screen_conf = file(params.fastq_screen_conf)
+    ch_fastq_screen_conf = file(params.fastq_screen_conf, checkIfExists: true)
     screen = fastqScreen(fastq_ch, ch_fastq_screen_conf)
     result = getFastqScreenResult(screen.screening_result) |
              filter { result -> result[1] =~ /pass/ } |
@@ -145,10 +145,10 @@ process multiQC {
 
     label 'fastq'
     input:
-    tuple val(key), file(results)
+    tuple val(key), path(results)
 
     output:
-    file('multiqc_*')
+    path('multiqc_*')
 
     script:
     """

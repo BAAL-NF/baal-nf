@@ -31,10 +31,10 @@ process baalProcessBams {
     label 'baal_chip'
 
     input:
-    tuple val(group_name), file(bed_file), file(snp_file), file(bamfiles), file(index_files), file(sample_file)
+    tuple val(group_name), path(bed_file), path(snp_file), path(bamfiles), path(index_files), path(sample_file)
 
     output:
-    tuple val(group_name), file('process_bams.rds'), file(snp_file), file(bed_file)
+    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file)
 
     script:
     """
@@ -69,12 +69,12 @@ process baalGetASB {
     label 'bigmem'
 
     input:
-    tuple val(group_name), file('process_bams.rds'), file(snp_file), file(bed_file)
+    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file)
     path report_md, stageAs: 'baal_report.Rmd'
 
     output:
-    tuple val(group_name), file('*.csv'), file(bed_file), emit: asb
-    file("${group_name}.html")
+    tuple val(group_name), path('*.csv'), path(bed_file), emit: asb
+    path("${group_name}.html")
 
     script:
     """

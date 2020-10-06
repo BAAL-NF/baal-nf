@@ -112,7 +112,7 @@ process reportFastQC {
     publishDir("${params.report_dir}/preFastQC/${key}/", mode: 'copy')
 
     input:
-    tuple val(key), file(reports)
+    tuple val(key), path(reports)
 
     output:
     file reports
