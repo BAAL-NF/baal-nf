@@ -173,7 +173,7 @@ workflow {
             
             snp_files : [group_name, snp_files.unique()]
             bed_files : [group_name, bedfiles.unique()]
-            baal_files : [group_name, runs, antigens, experiments, snp_files.unique(), bamfiles, index_files] }
+            baal_files : [group_name, runs, antigens, snp_files.unique(), bamfiles, index_files] }
         .set { group_ch }
 
     mergeBeds(group_ch.bed_files)

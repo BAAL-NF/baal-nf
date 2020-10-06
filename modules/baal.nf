@@ -8,11 +8,11 @@ process createSampleFile {
     publishDir("${params.report_dir}/samples/", mode:'copy')
 
     input:
-    tuple(val(group_name), file(bed_file), val(runs), val(antigens), val(experiments),
-          file(snp_files), file(bamfiles), file(index_files))
+    tuple(val(group_name), path(bed_file), val(runs), val(antigens),
+          path(snp_paths), path(bamfiles), path(index_files))
 
     output:
-    tuple val(group_name), file(bed_file), file(snp_files), file(bamfiles), file(index_files), file("${group_name}.tsv")
+    tuple val(group_name), path("${group_name}.tsv")
 
     script:
         output = "cat << EOF > ${group_name}.tsv\n"
@@ -104,7 +104,12 @@ workflow run_baal {
     baal_groups
 
     main:
-    baal_groups | createSampleFile | baalProcessBams
+    samples = createSampleFile(baal_groups)
+    baal_groups
+        .map { 
+            group_name, bed_file, runs, antigens, snp_files, bamfiles, index_files -> 
+            [ group_name, bed_file, snp_files, bamfiles, index_files ] }
+        .join(samples) | baalProcessBams
     baalGetASB(baalProcessBams.out, file("${projectDir}/doc/baal_report.Rmd"))
 
     emit:
