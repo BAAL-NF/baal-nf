@@ -4,11 +4,11 @@ process overlapPeaks {
     publishDir("${params.report_dir}/asb", mode: 'copy')
 
     input:
-    tuple val(group_name), file(asb_file), file(bed_file)
+    tuple val(group_name), path(asb_file), path(bed_file)
     path script
 
     output:
-    tuple val(group_name), file("${group_name}.withPeaks.csv")
+    tuple val(group_name), path("${group_name}.withPeaks.csv")
 
     script:
     """
@@ -23,11 +23,11 @@ process makeGatBedFiles {
     errorStrategy { task.exitStatus == 65 ? 'ignore' : 'terminate' }
 
     input:
-    tuple val(group), file(asb_file), file(snp_file)
+    tuple val(group), path(asb_file), path(snp_file)
     file bedfile_script
     
     output:
-    tuple val(group), file("foreground.bed"), file("background.bed")
+    tuple val(group), path("foreground.bed"), path("background.bed")
 
     script:
     """
@@ -40,7 +40,7 @@ process runGat {
     publishDir("${params.report_dir}/enrichment/", mode: "copy")
 
     input:
-    tuple val(group), file(foreground), file(background)
+    tuple val(group), path(foreground), path(background)
     file annotations
 
     output:
@@ -64,6 +64,6 @@ workflow process_results {
     if (params.run_gat){  
         makeGatBedFiles(overlapPeaks.out.join(snp_files),
                         file("${projectDir}/py/make_gat_bedfiles.py"))
-        runGat(makeGatBedFiles.out, file("${params.annotation_file}"))
+        runGat(makeGatBedFiles.out, file("${params.annotation_file}", checkIfExists: true))
     }
 }

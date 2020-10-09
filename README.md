@@ -44,13 +44,14 @@ baal-nf requires a listing of input files in CSV format, with the following name
 | :----- | :----- | :----- |
 | cell_line | GM12878 | Cell line |
 | transcription_factor | ESR1 | Transcription Factor |
-| experiment | SRX123456 | Unique identifier of the sequencing experiment|
 | run | SRR123456 | Unique identifier of sequencing run |
 | fastq_folder | `/scratch/mydata/folder/with/fastq/files` | Folder containing fastq files for this sequencing run |
 | bed_file | `/scratch/mydata/bedfiles/GM12878_ESR1.bed` | Path to bed file containing peak calls for the sequencing run |
 | snp_list | `/scratch/het_snps/GM12878_hetSNP.txt` | TSV file containing het SNPs and RAF in the [format expected by BaalChIP](https://github.com/InesdeSantiago/BaalChIP/blob/master/inst/test/GM12891_hetSNP.txt) |
 
 All files may be either local paths, HTTP URLs or S3 uris. Nextflow will automatically stage any files not present in the local filesystem.
+
+Other columns may be included in the input file for bookkeeping purposes. `baal-nf` will ignore these fields in its output.
 
 ## Configuration options
 
