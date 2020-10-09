@@ -66,7 +66,6 @@ process baalGetASB {
 
     label 'baal_chip'
     label 'parallel'
-    label 'bigmem'
 
     input:
     tuple val(group_name), file('process_bams.rds'), file(snp_file), file(bed_file)
