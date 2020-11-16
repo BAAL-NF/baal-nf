@@ -45,7 +45,8 @@ baal-nf requires a listing of input files in CSV format, with the following name
 | cell_line | GM12878 | Cell line |
 | transcription_factor | ESR1 | Transcription Factor |
 | run | SRR123456 | Unique identifier of sequencing run |
-| fastq_folder | `/scratch/mydata/folder/with/fastq/files` | Folder containing fastq files for this sequencing run |
+| fastq_1 | `/scratch/mydata/experiment/GM12878_ESR1_1.fastq.gz` | FASTQ file 1, use this field if using single-end sequencing |
+| fastq_2 | `/scratch/mydata/experiment/GM12878_ESR1_2.fastq.gz` | FASTQ file 2, leave blank if using single-end sequencing |
 | bed_file | `/scratch/mydata/bedfiles/GM12878_ESR1.bed` | Path to bed file containing peak calls for the sequencing run |
 | snp_list | `/scratch/het_snps/GM12878_hetSNP.txt` | TSV file containing het SNPs and RAF in the [format expected by BaalChIP](https://github.com/InesdeSantiago/BaalChIP/blob/master/inst/test/GM12891_hetSNP.txt) |
 
