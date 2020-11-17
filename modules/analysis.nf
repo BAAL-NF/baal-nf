@@ -44,7 +44,7 @@ process runGat {
     file annotations
 
     output:
-    file "${group}.tsv"
+    tuple val(group), file("${group}.tsv")
 
     script:
     """
@@ -60,10 +60,45 @@ workflow process_results {
 
     main:
     overlapPeaks(baal_results, file("${projectDir}/py/overlap_beds.py"))
-
-    if (params.run_gat){  
+   
+    if (params.run_gat) {
+        println("running gat")
         makeGatBedFiles(overlapPeaks.out.join(snp_files),
                         file("${projectDir}/py/make_gat_bedfiles.py"))
-        runGat(makeGatBedFiles.out, file("${params.annotation_file}", checkIfExists: true))
+        gat = runGat(makeGatBedFiles.out, file("${params.annotation_file}", checkIfExists: true))
+    } else {
+        println("not running gat")
+        gat = Channel.value()
     }
+
+    emit:
+    overlap_peaks = overlapPeaks.out
+    gat = gat
+}
+
+workflow create_report {
+    take:
+    asb_results
+    multiqc_results
+    overlap_peaks_results
+    gat_results
+
+    main:
+    multiqc_flat = multiqc_results.map { it -> it.flatten() }
+
+    header = ["key", "baal_report", "asb", "multiqc_data", "multiqc_report", "sample_file"]
+    combined_results = asb_results.join(overlap_peaks_results).join(multiqc_flat)
+    
+    if (params.run_gat) {
+        combined_results = combined_results.join(gat_results)
+        header += ["gat_results"]
+    }
+
+    header_str = header.join(",")
+    // header_ch = Channel.from([header])
+    // results_with_header = header_ch.concat(combined_results)
+    combined_results.collectFile({ line -> ["report.csv", line.join(",")] }, 
+                                    storeDir: params.pipeline_report_dir,
+                                    newLine: true,
+                                    seed: header_str)
 }

@@ -74,7 +74,7 @@ process baalGetASB {
 
     output:
     tuple val(group_name), path('*.csv'), path(bed_file), emit: asb
-    path("${group_name}.html")
+    tuple val(group_name), path("${group_name}.html"), emit: report
 
     script:
     """
@@ -113,5 +113,6 @@ workflow run_baal {
     baalGetASB(baalProcessBams.out, file("${projectDir}/doc/baal_report.Rmd"))
 
     emit:
-    baalGetASB.out.asb
+    asb = baalGetASB.out.asb
+    report = baalGetASB.out.report
 }
