@@ -11,11 +11,6 @@ if (params.fastq_screen_conf.isEmpty()) {
     exit 1
 }
 
-params.baal_report_dir="${params.report_dir}/baal_reports"
-params.baal_output_dir="${params.report_dir}/asb"
-params.multiqc_report_dir="${params.report_dir}/multiQC"
-params.gat_output_dir="${params.report_dir}/enrichment"
-
 // Import a CSV file with all sample identifiers
 workflow import_samples {
     main:
@@ -166,7 +161,6 @@ workflow {
                 .groupTuple()
                 .map { key, files -> [key, files.flatten() ] }
 
-    // Include in report
     // Maybe use the count_fastq metadata in stead
     multi_qc(count_fastq.out.metadata, reports)
 
@@ -183,10 +177,8 @@ workflow {
         .set { group_ch }
 
     mergeBeds(group_ch.bed_files)
-    // Include in report
     run_baal(mergeBeds.out.join(group_ch.baal_files))
 
-    // Include in report
     process_results(run_baal.out.asb, group_ch.snp_files)
 
     create_report(run_baal.out.report, multi_qc.out, process_results.out.overlap_peaks, process_results.out.gat)

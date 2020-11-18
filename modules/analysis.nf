@@ -62,12 +62,10 @@ workflow process_results {
     overlapPeaks(baal_results, file("${projectDir}/py/overlap_beds.py"))
    
     if (params.run_gat) {
-        println("running gat")
         makeGatBedFiles(overlapPeaks.out.join(snp_files),
                         file("${projectDir}/py/make_gat_bedfiles.py"))
         gat = runGat(makeGatBedFiles.out, file("${params.annotation_file}", checkIfExists: true))
     } else {
-        println("not running gat")
         gat = Channel.value()
     }
 
@@ -84,7 +82,6 @@ workflow create_report {
     gat_results
 
     main:
-    // Might want to turn this into some sort of function
     multiqc_flat = multiqc_results.map { key, values -> [key] + values.collect({report -> "${params.multiqc_report_dir}/${key}/${report.name}"}) }
     asb_output = asb_report.map{ key, report -> [key, "${params.baal_report_dir}/${report.name}"]}
     overlap_peaks_results = overlap_peaks_results.map{ key, report -> [key, "${params.baal_output_dir}/${report.name}"] }
