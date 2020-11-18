@@ -1,7 +1,7 @@
 // Analysis performed after BaalChIP has been run
 process overlapPeaks {
     label 'python'
-    publishDir("${params.report_dir}/asb", mode: 'copy')
+    publishDir(params.baal_output_dir, mode: 'copy')
 
     input:
     tuple val(group_name), path(asb_file), path(bed_file)
@@ -37,7 +37,7 @@ process makeGatBedFiles {
 
 process runGat {
     label 'python'
-    publishDir("${params.report_dir}/enrichment/", mode: "copy")
+    publishDir("${params.gat_output_dir}/", mode: "copy")
 
     input:
     tuple val(group), path(foreground), path(background)
@@ -78,25 +78,27 @@ workflow process_results {
 
 workflow create_report {
     take:
-    asb_results
+    asb_report
     multiqc_results
     overlap_peaks_results
     gat_results
 
     main:
-    multiqc_flat = multiqc_results.map { it -> it.flatten() }
+    // Might want to turn this into some sort of function
+    multiqc_flat = multiqc_results.map { key, values -> [key] + values.collect({report -> "${params.multiqc_report_dir}/${key}/${report.name}"}) }
+    asb_output = asb_report.map{ key, report -> [key, "${params.baal_report_dir}/${report.name}"]}
+    overlap_peaks_results = overlap_peaks_results.map{ key, report -> [key, "${params.baal_output_dir}/${report.name}"] }
 
     header = ["key", "baal_report", "asb", "multiqc_data", "multiqc_report", "sample_file"]
-    combined_results = asb_results.join(overlap_peaks_results).join(multiqc_flat)
+    combined_results = asb_output.join(overlap_peaks_results).join(multiqc_flat)
     
     if (params.run_gat) {
+        gat_results = gat_results.map({key, report -> [key, "${params.gat_output_dir}/${report.name}"]})
         combined_results = combined_results.join(gat_results)
         header += ["gat_results"]
     }
 
     header_str = header.join(",")
-    // header_ch = Channel.from([header])
-    // results_with_header = header_ch.concat(combined_results)
     combined_results.collectFile({ line -> ["report.csv", line.join(",")] }, 
                                     storeDir: params.pipeline_report_dir,
                                     newLine: true,

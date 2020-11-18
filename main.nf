@@ -11,6 +11,11 @@ if (params.fastq_screen_conf.isEmpty()) {
     exit 1
 }
 
+params.baal_report_dir="${params.report_dir}/baal_reports"
+params.baal_output_dir="${params.report_dir}/asb"
+params.multiqc_report_dir="${params.report_dir}/multiQC"
+params.gat_output_dir="${params.report_dir}/enrichment"
+
 // Import a CSV file with all sample identifiers
 workflow import_samples {
     main:

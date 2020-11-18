@@ -62,7 +62,7 @@ process baalProcessBams {
 }
 
 process baalGetASB {
-    publishDir("${params.report_dir}/baal_reports", mode: 'copy', pattern: "${group_name}.html")
+    publishDir(params.baal_report_dir, mode: 'copy', pattern: "${group_name}.html")
 
     label 'baal_chip'
     label 'parallel'

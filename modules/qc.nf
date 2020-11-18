@@ -141,7 +141,7 @@ workflow fastq_screen {
 }
 
 process multiQC {
-    publishDir("${params.report_dir}/multiQC/${key}", mode: 'copy')
+    publishDir("${params.multiqc_report_dir}/${key}", mode: 'copy')
 
     label 'fastq'
     input:
