@@ -99,7 +99,7 @@ workflow create_report {
     }
 
     header_str = header.join(",")
-    combined_results.collectFile({ line -> ["report.csv", line.join(",")] }, 
+    combined_results.collectFile({ line -> ["pipeline_report.csv", line.join(",")] }, 
                                     storeDir: params.pipeline_report_dir,
                                     newLine: true,
                                     seed: header_str)
