@@ -125,7 +125,7 @@ workflow {
     include { trimGalore; create_bam; mergeBeds } from './modules/fastq.nf'
     include { run_baal } from './modules/baal.nf'
     include { multi_qc } from './modules/qc.nf'
-    include { process_results } from './modules/analysis.nf'
+    include { process_results; create_report } from './modules/analysis.nf'
 
     // Load CSV file
     import_samples()
@@ -161,7 +161,8 @@ workflow {
                 .groupTuple()
                 .map { key, files -> [key, files.flatten() ] }
 
-    multi_qc(import_samples.out.metadata, reports)
+    // Maybe use the count_fastq metadata in stead
+    multi_qc(count_fastq.out.metadata, reports)
 
     // Regroup the bam files with their associated metadata and run baal chip
     count_fastq.out.metadata
@@ -178,5 +179,7 @@ workflow {
     mergeBeds(group_ch.bed_files)
     run_baal(mergeBeds.out.join(group_ch.baal_files))
 
-    process_results(run_baal.out, group_ch.snp_files)
+    process_results(run_baal.out.asb, group_ch.snp_files)
+
+    create_report(run_baal.out.report, multi_qc.out, process_results.out.overlap_peaks, process_results.out.gat)
 }

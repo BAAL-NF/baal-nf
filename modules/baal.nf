@@ -62,7 +62,7 @@ process baalProcessBams {
 }
 
 process baalGetASB {
-    publishDir("${params.report_dir}/baal_reports", mode: 'copy', pattern: "${group_name}.html")
+    publishDir(params.baal_report_dir, mode: 'copy', pattern: "${group_name}.html")
 
     label 'baal_chip'
     label 'parallel'
@@ -73,7 +73,7 @@ process baalGetASB {
 
     output:
     tuple val(group_name), path('*.csv'), path(bed_file), emit: asb
-    path("${group_name}.html")
+    tuple val(group_name), path("${group_name}.html"), emit: report
 
     script:
     """
@@ -112,5 +112,6 @@ workflow run_baal {
     baalGetASB(baalProcessBams.out, file("${projectDir}/doc/baal_report.Rmd"))
 
     emit:
-    baalGetASB.out.asb
+    asb = baalGetASB.out.asb
+    report = baalGetASB.out.report
 }

@@ -1,7 +1,7 @@
 // Analysis performed after BaalChIP has been run
 process overlapPeaks {
     label 'python'
-    publishDir("${params.report_dir}/asb", mode: 'copy')
+    publishDir(params.baal_output_dir, mode: 'copy')
 
     input:
     tuple val(group_name), path(asb_file), path(bed_file)
@@ -37,14 +37,14 @@ process makeGatBedFiles {
 
 process runGat {
     label 'python'
-    publishDir("${params.report_dir}/enrichment/", mode: "copy")
+    publishDir("${params.gat_output_dir}/", mode: "copy")
 
     input:
     tuple val(group), path(foreground), path(background)
     file annotations
 
     output:
-    file "${group}.tsv"
+    tuple val(group), file("${group}.tsv")
 
     script:
     """
@@ -60,10 +60,44 @@ workflow process_results {
 
     main:
     overlapPeaks(baal_results, file("${projectDir}/py/overlap_beds.py"))
-
-    if (params.run_gat){  
+   
+    if (params.run_gat) {
         makeGatBedFiles(overlapPeaks.out.join(snp_files),
                         file("${projectDir}/py/make_gat_bedfiles.py"))
-        runGat(makeGatBedFiles.out, file("${params.annotation_file}", checkIfExists: true))
+        gat = runGat(makeGatBedFiles.out, file("${params.annotation_file}", checkIfExists: true))
+    } else {
+        gat = Channel.value()
     }
+
+    emit:
+    overlap_peaks = overlapPeaks.out
+    gat = gat
+}
+
+workflow create_report {
+    take:
+    asb_report
+    multiqc_results
+    overlap_peaks_results
+    gat_results
+
+    main:
+    multiqc_flat = multiqc_results.map { key, values -> [key] + values.collect({report -> "${params.multiqc_report_dir}/${key}/${report.name}"}) }
+    asb_output = asb_report.map{ key, report -> [key, "${params.baal_report_dir}/${report.name}"]}
+    overlap_peaks_results = overlap_peaks_results.map{ key, report -> [key, "${params.baal_output_dir}/${report.name}"] }
+
+    header = ["key", "baal_report", "asb", "multiqc_data", "multiqc_report", "sample_file"]
+    combined_results = asb_output.join(overlap_peaks_results).join(multiqc_flat)
+    
+    if (params.run_gat) {
+        gat_results = gat_results.map({key, report -> [key, "${params.gat_output_dir}/${report.name}"]})
+        combined_results = combined_results.join(gat_results)
+        header += ["gat_results"]
+    }
+
+    header_str = header.join(",")
+    combined_results.collectFile({ line -> ["pipeline_report.csv", line.join(",")] }, 
+                                    storeDir: params.pipeline_report_dir,
+                                    newLine: true,
+                                    seed: header_str)
 }
