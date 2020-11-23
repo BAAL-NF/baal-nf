@@ -29,7 +29,15 @@ params.genome = "index_file_basename" // e.g. hg19
 
 The pipeline currently supports docker, singularity and anaconda for dependency management. We recommend using docker or singularity for reproducibility, though anaconda may be used if your computing infrastructure does not support containers. 
 
-If using anaconda, you will need to manually create an anaconda environment and install our modified version of BaalChIP manually from (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP). The path to this environment should then be provided as the parameter baal_chip_env (see below).
+If using anaconda, you will need to manually create an anaconda environment and install our modified version of BaalChIP manually from (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP). The path to this environment should then be provided as the parameter `baal_chip_env` (see below).
+
+The following configuration profiles are available for general use
+| Name | Description |
+| :----- | :----- |
+| docker | Use the docker container engine |
+| singularity | Use the singularity container engine |
+| conda | Use anaconda environments |
+| test | Run the pipeline test set, can be used in combination with any of the above environment profiles |
 
 ## Input file format
 
