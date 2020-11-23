@@ -6,8 +6,10 @@ if (params.sample_file.isEmpty()) {
     exit 1
 }
 
-if (params.fastq_screen_conf.isEmpty()) {
-    println('Error: missing fastq screen configuration file')
+if (workflow.profile.split(',').contains('conda') && (! params.baal_chip_env)) {
+    println('Error: conda configuration profile selected, but baal_chip_env not specified.')
+    println('Please specify the path to an anaconda environment containing BaalChIP.')
+    println('See https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/blob/master/README.md#configuration-options for details.')
     exit 1
 }
 
