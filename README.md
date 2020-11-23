@@ -32,6 +32,7 @@ The pipeline currently supports docker, singularity and anaconda for dependency 
 If using anaconda, you will need to manually create an anaconda environment and install our modified version of BaalChIP manually from (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP). The path to this environment should then be provided as the parameter `baal_chip_env` (see below).
 
 The following configuration profiles are available for general use
+
 | Name | Description |
 | :----- | :----- |
 | docker | Use the docker container engine |
