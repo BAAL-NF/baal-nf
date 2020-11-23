@@ -2,8 +2,6 @@
 params.max_acceptable_unmapped = 90
 
 process fastQC {
-    label 'fastq'
-
     input:
     tuple val(run), path("${run}*.fastq.gz")
     file fastqc_conf
@@ -56,20 +54,33 @@ workflow filter_fastq {
       report
 }
 
+process fetchFastqScreenFiles {
+    storeDir params.fastq_screen_cache
+
+    output:
+    path "FastQ_Screen_Genomes"
+
+    shell:
+    '''
+    fastq_screen --get_genomes
+    # Strip out absolute path to accomodate staging into working directory
+    sed -i "s#${PWD}/##g" FastQ_Screen_Genomes/fastq_screen.conf
+    '''
+}
+
 process fastqScreen {
-    label 'fastq'
     label 'parallel'
 
     input:
     tuple val(run), path("${run}*.fastq.gz")
-    file fastq_screen_conf
+    path fastq_screen_folder
     output:
     tuple val(run), path('*screen.txt'), emit: screening_result
     tuple val(run), path('*screen*'), emit: report
 
     script:
     options = ['--aligner', 'bowtie2']
-    options += ['--conf', "${params.fastq_screen_conf}"]
+    options += ['--conf', "${fastq_screen_folder}/fastq_screen.conf"]
 
     if (task.cpus > 1) {
         options += ['--threads', "${task.cpus}"]
@@ -97,8 +108,6 @@ process fastqScreen {
 }
 
 process getFastqScreenResult {
-    label 'python'
-
     input:
     tuple val(run), path(screening_result)
 
@@ -129,8 +138,10 @@ workflow fastq_screen {
     fastq_ch
 
     main:
-    ch_fastq_screen_conf = file(params.fastq_screen_conf, checkIfExists: true)
-    screen = fastqScreen(fastq_ch, ch_fastq_screen_conf)
+    // Fetch fastq-screen files if cache directory is empty
+    // This will only work if the directory contains a folder called FastQ_Screen_Genomes
+    // That folder will in turn need to contain the file fastq_screen.conf
+    screen = fastqScreen(fastq_ch, fetchFastqScreenFiles())
     result = getFastqScreenResult(screen.screening_result) |
              filter { result -> result[1] =~ /pass/ } |
              map { result -> result [0] }
@@ -143,7 +154,6 @@ workflow fastq_screen {
 process multiQC {
     publishDir("${params.multiqc_report_dir}/${key}", mode: 'copy')
 
-    label 'fastq'
     input:
     tuple val(key), path(results)
 

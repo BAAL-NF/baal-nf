@@ -1,6 +1,5 @@
 // process fastq files and prepare them for use in BaalChIP
 process trimGalore {
-    label 'fastq'
     label 'parallel'
 
     input:
@@ -35,7 +34,6 @@ process trimGalore {
 }
 
 process createBam {
-    label 'fastq'
     label 'bigmem'
     label 'parallel'
 
@@ -82,7 +80,6 @@ process createBam {
 
 process mergeBeds {
      publishDir("${params.report_dir}/bed_files/", mode: 'copy')
-     label 'fastq'
 
      input:
      tuple(val(group_name), path(bedfiles))
@@ -98,7 +95,6 @@ process mergeBeds {
 }
 
 process index {
-    label 'fastq'
     input:
     tuple val(run), path(bamfile)
 

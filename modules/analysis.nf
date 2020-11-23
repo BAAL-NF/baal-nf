@@ -1,6 +1,5 @@
 // Analysis performed after BaalChIP has been run
 process overlapPeaks {
-    label 'python'
     publishDir(params.baal_output_dir, mode: 'copy')
 
     input:
@@ -17,7 +16,6 @@ process overlapPeaks {
 }
 
 process makeGatBedFiles {
-    label 'python'
     // the script will exit with status EX_DATAERR if
     // the output from BaalChIP contains no significant SNPs
     errorStrategy { task.exitStatus == 65 ? 'ignore' : 'terminate' }
@@ -36,7 +34,6 @@ process makeGatBedFiles {
 }
 
 process runGat {
-    label 'python'
     publishDir("${params.gat_output_dir}/", mode: "copy")
 
     input:
