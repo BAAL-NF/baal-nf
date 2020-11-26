@@ -6,7 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [[0.5.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.6.0...0.5.0) - 23.11.2020
+### Changed
+- Support a mixture of compressed and uncompressed bedfiles
+
+## [[0.5.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.0...0.5.0) - 23.11.2020
 
 ### Added
 - Support for downloading fastq-screen genomes automatically
