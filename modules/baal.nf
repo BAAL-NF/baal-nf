@@ -84,7 +84,7 @@ process baalGetASB {
     library(rmarkdown)
     # Read in hets from file
     res <- readRDS("process_bams.rds")
-    res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus}, workerLog = "debug.log")
+    res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus}, workerLog = "debug.log", clusterType = "PSOCK")
     saveRDS(res, "final.rds")
     report <- BaalChIP.report(res)
 
