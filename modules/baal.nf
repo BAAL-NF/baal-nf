@@ -74,7 +74,6 @@ process baalGetASB {
     output:
     tuple val(group_name), path('*.csv'), path(bed_file), emit: asb
     tuple val(group_name), path("${group_name}.html"), emit: report
-    file "debug.log"
 
     script:
     """
@@ -84,7 +83,7 @@ process baalGetASB {
     library(rmarkdown)
     # Read in hets from file
     res <- readRDS("process_bams.rds")
-    res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus}, workerLog = "debug.log", clusterType = "PSOCK")
+    res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus}, clusterType = "PSOCK")
     saveRDS(res, "final.rds")
     report <- BaalChIP.report(res)
 
