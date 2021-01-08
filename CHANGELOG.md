@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+### Changed
+
+## [[0.5.2]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.1...0.5.2) - 26.11.2020
+### Changed
+- Memory optimisations for BaalChIP
+- Move to new version of baal-nf-env to fix issue with compressed bedfiles
 
 ## [[0.5.1]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.0...0.5.1) - 26.11.2020
 ### Changed

@@ -20,6 +20,7 @@ if __name__ == '__main__':
     asb_df = pd.read_csv(args.asb_file, index_col=0)
 
     input_cols = list(asb_df.columns)
+    output_cols = input_cols + ["peak"]
 
     asb_df["Start"] = asb_df["POS"]
     asb_df["End"] = asb_df["POS"]+1
@@ -33,7 +34,7 @@ if __name__ == '__main__':
         # This tends to indicate an empty bed file, so mark all SNPs as
         # not in a peak and exit
         asb_df["peak"] = False
-        asb_df.to_csv(args.output, index=False)
+        asb_df[output_cols].to_csv(args.output, index=False)
         exit(0)
 
     peaks = peaks.insert(pd.Series(name="peak", data=[1]*len(peaks)))
@@ -42,4 +43,4 @@ if __name__ == '__main__':
     result_df = intersection.as_df()
 
     result_df["peak"] = result_df.apply(lambda row: row["peak"] == 1, axis=1)
-    result_df[input_cols + ["peak"]].to_csv(args.output, index=False)
+    result_df[output_cols].to_csv(args.output, index=False)
