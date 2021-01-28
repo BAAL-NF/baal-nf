@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 ### Changed
 
+## [[0.5.3]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.2...0.5.3) - 29.01.2021
+### Changed
+- Add PID isolation to eddie configuration profile to fix issues with child processes getting killed.
+
 ## [[0.5.2]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.1...0.5.2) - 26.11.2020
 ### Changed
 - Memory optimisations for BaalChIP
