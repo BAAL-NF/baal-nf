@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 ### Changed
 
+## [[0.6.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.3...0.6.0) - 5.02.2021
+### Added
+- Support for google life sciences API through gls profile
+### Changed
+- Fix bug preventing users from overriding default output directories
+- Move to baal-nf-env 1.2.0, adding support for GLS
+- Refactor container configuration for easier container updates in future
+
 ## [[0.5.3]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.2...0.5.3) - 29.01.2021
 ### Changed
 - Add PID isolation to eddie configuration profile to fix issues with child processes getting killed.
