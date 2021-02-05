@@ -40,7 +40,9 @@ The following configuration profiles are available for general use
 | docker | Use the docker container engine |
 | singularity | Use the singularity container engine |
 | conda | Use anaconda environments |
+| gls | Execute using the (https://www.nextflow.io/docs/latest/google.html#cloud-life-sciences)[Google Life Sciences API] |
 | test | Run the pipeline test set, can be used in combination with any of the above environment profiles |
+| eddie | Platform-specific profile for the University of Edinburgh eddie cluster |
 
 ## Input file format
 
