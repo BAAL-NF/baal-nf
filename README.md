@@ -11,7 +11,7 @@ conda config --add channels bioconda
 
 Baal-NF is a pipeline for computing allele-specific binding variants (ASBVs) in cancer and non-cancer cell lines.
 It features quality checking and reporting using fastqc, fastq-screen and multiqc, and uses the [BaalChIP](https://github.com/InesdeSantiago/BaalChIP) R package for the detection of ASBVs.
-The pipeline is run using nextflow, and currently supports native and anaconda environments only.
+The pipeline is run using nextflow, and currently supports execution using native environments, anaconda, docker and singularity.
 
 ![Pipeline flow](img/baal_pipeline.png)
 
