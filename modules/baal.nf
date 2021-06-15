@@ -63,6 +63,8 @@ process baalProcessBams {
 
 process baalGetASB {
     publishDir(params.baal_report_dir, mode: 'copy', pattern: "${group_name}.html")
+    // Optionally export the object files
+    if (params.save_baal_objects) publishDir(params.baal_object_dir, mode: 'copy', pattern: "*.rds")
 
     label 'baal_chip'
     label 'parallel'
@@ -72,8 +74,9 @@ process baalGetASB {
     path report_md, stageAs: 'baal_report.Rmd'
 
     output:
-    tuple val(group_name), path('*.csv'), path(bed_file), emit: asb
+    tuple val(group_name), path("${group_name}.csv"), path(bed_file), emit: asb
     tuple val(group_name), path("${group_name}.html"), emit: report
+    path("${group_name}.rds")
 
     script:
     """
@@ -84,13 +87,11 @@ process baalGetASB {
     # Read in hets from file
     res <- readRDS("process_bams.rds")
     res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus}, clusterType = "PSOCK")
-    saveRDS(res, "final.rds")
+    saveRDS(res, "${group_name}.rds")
     report <- BaalChIP.report(res)
 
     # Write ASB results to CSV file
-    for (group in names(report)) {
-            write.csv(report[[group]], paste(group,".csv", sep=""))
-    }
+    write.csv(report[["${group_name}"]], "${group_name}.csv")
 
     # generate final report
     knit("baal_report.Rmd")

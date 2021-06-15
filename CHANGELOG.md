@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- New config option to export RDS files for debugging purposes.
 ### Changed
 
 ## [[0.6.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.3...0.6.0) - 5.02.2021
