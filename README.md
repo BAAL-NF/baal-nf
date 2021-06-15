@@ -77,6 +77,7 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 | report_dir | `"${workflow.launchDir}/reports/"`| Directory to place all reports in, defaults to a subfolder named `reports` in the launch directory. | No
 | run_gat | `true` | Whether to run GAT enrichment analysis against the ENSEMBL genome annotations | No
 | baal_chip_env | null | Only required when using the conda profile. Path to conda environment containing BaalChIP | Yes, if using the conda profile
+| save_baal_objects | false | Export BaalChIP objects as RDS files | No
 
 # ToDo
 
