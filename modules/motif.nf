@@ -28,6 +28,8 @@ process mergeBeds {
 }
 
 process profileMotifs {
+    label 'parallel'
+
     container 'oalmelid/nopeak:latest'
     publishDir("${params.report_dir}/motifs/profiles/", mode: "copy")
 
@@ -42,7 +44,7 @@ process profileMotifs {
     // FIXME: add a nopeak script to container for easy running
     // FIXME: copy utility scripts to container
     """
-    java -jar /usr/local/lib/noPeak.jar PROFILE --reads ${bed_file} --genome ${genome} -k ${params.motif_kmer_length}
+    java -jar /usr/local/lib/noPeak.jar PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${params.motif_kmer_length}
     """
 }
 
