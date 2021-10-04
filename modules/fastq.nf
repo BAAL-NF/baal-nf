@@ -57,7 +57,7 @@ process createBam {
         extra_args += "-p ${task.cpus}"
     }
     // I hate the fact that I have to fall back on bash to check the length of this list.
-    result = """
+    script = """
     export BOWTIE2_INDEXES=${index_files}
     FILES=(${trimmed})
     case \${#FILES[@]} in
@@ -78,11 +78,11 @@ process createBam {
     """
 
     if (params.dedup_umi) {
-        result += "umi_tools dedup ${params.umi_tools_options} --stdin=${run.bam} --log=${run}.dedup.log > ${run}_dedup.bam"
+        script += "umi_tools dedup ${params.umi_tools_options} --stdin=${run.bam} --log=${run}.dedup.log > ${run}_dedup.bam\n"
     } else {
-        result += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"${run}.metrics\""
+        script += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"${run}.metrics\"\n"
     }
-    result
+    script
 }
 
 process mergeBeds {

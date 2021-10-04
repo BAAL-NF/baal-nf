@@ -37,7 +37,7 @@ process baalProcessBams {
     tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file)
 
     script:
-    """
+    script = """
     #!/usr/bin/env Rscript
     library(BaalChIP)
 
@@ -56,9 +56,12 @@ process baalProcessBams {
                                          'highcoverage'=pickrell2011cov1_hg19),
                     RegionsToKeep=list('UniqueMappability'=UniqueMappability50bp_hg19))
     res <- mergePerGroup(res)
-    res <- filter1allele(res)
-    saveRDS(res, file='process_bams.rds')
     """
+    
+    if( ! params.dedup_umi ) script += "res <- filter1allele(res)\n"
+
+    script += "saveRDS(res, file='process_bams.rds')\n"
+    script    
 }
 
 process baalGetASB {
