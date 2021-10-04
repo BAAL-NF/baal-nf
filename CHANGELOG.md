@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Support for multiple, configurable credible intervals.
+- Support for UMI deduplication.
 ### Changed
 
 ## [[0.6.1]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.6.0...0.6.1) - 15.06.2021
