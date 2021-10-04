@@ -78,7 +78,7 @@ process createBam {
     """
 
     if (params.dedup_umi) {
-        script += "umi_tools dedup ${params.umi_tools_options} --stdin=${run.bam} --log=${run}.dedup.log > ${run}_dedup.bam\n"
+        script += "umi_tools dedup ${params.umi_tools_options} --stdin=${run}.bam --log=${run}.dedup.log > ${run}_dedup.bam\n"
     } else {
         script += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"${run}.metrics\"\n"
     }
