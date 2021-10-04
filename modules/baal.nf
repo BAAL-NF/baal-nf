@@ -67,7 +67,7 @@ process baalProcessBams {
 process baalGetASB {
     publishDir(params.baal_report_dir, mode: 'copy', pattern: "${group_name}.html")
     // Optionally export the object files
-    if (params.save_baal_objects) publishDir(params.baal_object_dir, mode: 'copy', pattern: "*.rds")
+    publishDir(params.baal_object_dir, mode: 'copy', pattern: "*.rds", enable: params.save_baal_objects)
 
     label 'baal_chip'
     label 'parallel'
