@@ -38,7 +38,7 @@ process createBam {
     label 'parallel'
 
     publishDir("${params.report_dir}/logs/bowtie2/", mode: 'copy', pattern: "${run}.log")
-    if (params.dedup_umi) publishDir("${params.report_dir}/logs/dedup/", mode: 'copy', pattern: "${run}.dedup.log")
+    if (params.dedup_umi) publishDir("${params.report_dir}/logs/dedup/", mode: 'copy', pattern: "*.dedup.log")
     errorStrategy 'retry'
     maxRetries 3
 
