@@ -48,7 +48,7 @@ process createBam {
 
     output:
     tuple val(run), path("${run}_dedup.bam"), emit: bamfile
-    tuple val(run), path('**.metrics'), emit: report
+    tuple val(run), path('metrics/*'), emit: report
     file "${run}.log"
 
     script:
@@ -75,14 +75,15 @@ process createBam {
     esac
     samtools sort ${run}.sam -o ${run}.sam.sorted
     samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
+    mkdir metrics
     """
 
     if (params.dedup_umi) {
         // UMI tools needs the bam file to be indexed. We still need to index the deduplicated files afterwards.
         script += "samtools index ${run}.bam\n"
-        script += "umi_tools dedup ${params.umi_tools_options} --stdin=${run}.bam --output-stats=\"${run}.metrics\"  --log=${run}.dedup.log > ${run}_dedup.bam\n"
+        script += "umi_tools dedup ${params.umi_tools_options} --stdin=${run}.bam --output-stats=\"metrics/${run}\"  --log=${run}.dedup.log > ${run}_dedup.bam\n"
     } else {
-        script += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"${run}.metrics\"\n"
+        script += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"metrics/${run}.metrics\"\n"
     }
     script
 }
