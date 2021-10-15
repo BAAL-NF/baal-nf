@@ -80,7 +80,7 @@ process createBam {
     if (params.dedup_umi) {
         // UMI tools needs the bam file to be indexed. We still need to index the deduplicated files afterwards.
         script += "samtools index ${run}.bam\n"
-        script += "umi_tools dedup ${params.umi_tools_options} --stdin=${run}.bam --log=${run}.dedup.log > ${run}_dedup.bam\n"
+        script += "umi_tools dedup ${params.umi_tools_options} --stdin=${run}.bam --output-stats=\"${run}.metrics\"  --log=${run}.dedup.log > ${run}_dedup.bam\n"
     } else {
         script += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"${run}.metrics\"\n"
     }
