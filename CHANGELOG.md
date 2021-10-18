@@ -6,13 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Support for multiple, configurable credible intervals.
 ### Changed
+
+## [[0.7.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.6.1...0.7.0) - 18.10.2021
+### Added
+- Support for multiple, configurable credible intervals.
+- Support for UMI deduplication.
 
 ## [[0.6.1]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.6.0...0.6.1) - 15.06.2021
 ### Added
 - New config option to export RDS files for debugging purposes.
-### Changed
 
 ## [[0.6.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.5.3...0.6.0) - 5.02.2021
 ### Added

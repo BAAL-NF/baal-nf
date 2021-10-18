@@ -38,6 +38,7 @@ process createBam {
     label 'parallel'
 
     publishDir("${params.report_dir}/logs/bowtie2/", mode: 'copy', pattern: "${run}.log")
+    publishDir("${params.report_dir}/logs/dedup/", mode: 'copy', pattern: "${run}.dedup.log", enable: params.dedup_umi)
     errorStrategy 'retry'
     maxRetries 3
 
@@ -47,35 +48,43 @@ process createBam {
 
     output:
     tuple val(run), path("${run}_dedup.bam"), emit: bamfile
-    tuple val(run), path('**.metrics'), emit: report
+    tuple val(run), path('metrics/*'), emit: report
     file "${run}.log"
 
     script:
+    // Check that we have one or two fastq files provided. Set a flag for whether we consequently have paired-end reads
+    paired = (trimmed instanceof List)
+    if (paired && (trimmed.size() > 2)) throw new Exception("Too many fastq files provided for mapping: ${trimmed.getClass()}")
+
+    // If we have multiple cores, utilise bowtie2s threaded mode
     extra_args = ''
     if (task.cpus > 1) {
         extra_args += "-p ${task.cpus}"
     }
-    // I hate the fact that I have to fall back on bash to check the length of this list.
-    """
-    export BOWTIE2_INDEXES=${index_files}
-    FILES=(${trimmed})
-    case \${#FILES[@]} in
-        1)
-        bowtie2 -x ${params.genome} ${extra_args} -U \${FILES[0]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
-        ;;
+    
+    script = "export BOWTIE2_INDEXES=${index_files}\n"
 
-        2)
-        bowtie2 -x ${params.genome} ${extra_args} -1 \${FILES[0]} -2 \${FILES[1]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n
-        ;;
+    if (paired) {
+        script += "bowtie2 -x ${params.genome} ${extra_args} -1 ${trimmed[0]} -2 ${trimmed[1]} -S ${run}.sam 2> >(tee ${run}.log >&2)\n"
+    } else {
+        script += "bowtie2 -x ${params.genome} ${extra_args} -U ${trimmed} -S ${run}.sam 2> >(tee ${run}.log >&2)\n"
+    }
+    
+    script += """\
+              samtools sort ${run}.sam -o ${run}.sam.sorted
+              samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
+              mkdir metrics
+              """.stripIndent()
 
-        *)
-        echo Error getting files for sample ${run}, exiting
-        exit 1
-    esac
-    samtools sort ${run}.sam -o ${run}.sam.sorted
-    samtools view -h -S -b ${run}.sam.sorted > ${run}.bam
-    picard MarkDuplicates I="${run}.bam" O="${run}_dedup.bam" M="${run}.metrics"
-    """
+    if (params.dedup_umi) {
+        // UMI tools needs the bam file to be indexed. We still need to index the deduplicated files afterwards.
+        script += "samtools index ${run}.bam\n"
+        script += "umi_tools dedup ${params.umi_tools_options} ${paired ? '--paired' : ''} --stdin=${run}.bam --output-stats=\"metrics/${run}\"  --log=${run}.dedup.log > ${run}_dedup.bam\n"
+    } else {
+        script += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"metrics/${run}.metrics\"\n"
+    }
+
+    script
 }
 
 process mergeBeds {
