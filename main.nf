@@ -27,17 +27,22 @@ workflow import_samples {
                 ([row.fastq_1, row.fastq_2] - '').collect {
                     path -> file(path, checkIfExists: true) 
                 },
+                ([row.gDNA_1, row.gDNA_2] - '').collect {
+                    path -> file(path, checkIfExists: true)
+                },
                 file("${row.bed_file}", checkIfExists: true),
                 file("${row.snp_list}", checkIfExists: true))
         } .multiMap {
-            run, group, transcription_factor, fastq_files, bed_file, snp_file ->
+            run, group, transcription_factor, fastq_files, gDNA_files, bed_file, snp_file ->
             fastq: [run, fastq_files]
+            gDNA: [group, gDNA_files]
             metadata: [run, group, transcription_factor, bed_file, snp_file]
         }
         .set { srr_ch }
 
     emit:
     fastq = srr_ch.fastq
+    gDNA = srr_ch.gDNA.unique()
     metadata = srr_ch.metadata
 }
 
