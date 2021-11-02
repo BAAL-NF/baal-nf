@@ -24,25 +24,26 @@ workflow import_samples {
                 row.run,
                 "${row.cell_line}_${row.transcription_factor}",
                 row.transcription_factor,
+                row.background_run,
                 ([row.fastq_1, row.fastq_2] - '').collect {
                     path -> file(path, checkIfExists: true) 
                 },
-                ([row.gDNA_1, row.gDNA_2] - '').collect {
+                ([row.background_1, row.background_2] - '').collect {
                     path -> file(path, checkIfExists: true)
                 },
                 file("${row.bed_file}", checkIfExists: true),
                 file("${row.snp_list}", checkIfExists: true))
         } .multiMap {
-            run, group, transcription_factor, fastq_files, gDNA_files, bed_file, snp_file ->
-            fastq: [run, fastq_files]
-            gDNA: [group, gDNA_files]
-            metadata: [run, group, transcription_factor, bed_file, snp_file]
+            run, group, transcription_factor, background_run, fastq_files, background_files, bed_file, snp_file ->
+            fastq: [run, fastq_files, "true"]
+            background: [background_run, background_files, "false"]
+            metadata: [run, group, transcription_factor, background_run, bed_file, snp_file]
         }
         .set { srr_ch }
 
     emit:
     fastq = srr_ch.fastq
-    gDNA = srr_ch.gDNA.unique()
+    background = srr_ch.background.unique()
     metadata = srr_ch.metadata
 }
 
@@ -137,8 +138,8 @@ workflow {
     // Load CSV file
     import_samples()
 
-    // Pre-trimming filtering step
-    filter_fastq_before(import_samples.out.fastq)
+    // Pre-trimming filtering step - run on both samples and gDNA files
+    filter_fastq_before(import_samples.out.fastq.mix(import_samples.out.background))
 
     import_samples.out.metadata
         .join(filter_fastq_before.out.report)
