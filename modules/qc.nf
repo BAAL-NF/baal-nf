@@ -3,7 +3,7 @@ params.max_acceptable_unmapped = 90
 
 process fastQC {
     input:
-    tuple val(run), path("${run}*.fastq.gz")
+    tuple val(run), path("${run}*.fastq.gz"), val(not_background)
     file fastqc_conf
 
     output:
