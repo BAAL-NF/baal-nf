@@ -3,10 +3,10 @@ process trimGalore {
     label 'parallel'
 
     input:
-    tuple val(run), path("${run}*.fastq.gz")
+    tuple val(run), path("${run}*.fastq.gz"), val(not_background)
 
     output:
-    tuple val(run), path("${run}_tg*"), emit: trimmed_fastq
+    tuple val(run), path("${run}_tg*"), val(not_background), emit: trimmed_fastq
     tuple val(run), path('*report*'), emit: report
 
     script:
