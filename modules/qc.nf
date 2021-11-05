@@ -3,11 +3,11 @@ params.max_acceptable_unmapped = 90
 
 process fastQC {
     input:
-    tuple val(run), path("${run}*.fastq.gz"), val(not_background)
+    tuple val(run), val(group), val(not_background), path("${run}*.fastq.gz")
     file fastqc_conf
 
     output:
-    tuple val(run), path('*_fastqc.zip'), path('*_fastqc.html')
+    tuple val(run), val(group), val(not_background), path('*_fastqc.zip'), path('*_fastqc.html')
 
     script:
     """
@@ -18,7 +18,7 @@ process fastQC {
 
 process getFastqcResult {
     input:
-    tuple val(run), path(report_zip), path(html_report)
+    tuple val(run), val(group), val(not_background), path(report_zip), path(html_report)
 
     output:
     tuple stdout, val(run)
@@ -46,7 +46,7 @@ workflow filter_fastq {
                  map { result -> result[1..-1] }
 
     report = fastQC.out.map {
-        run, zip, html -> [run, [zip, html].flatten()]
+        run, group, not_background, zip, html -> [run, group, not_background, [zip, html].flatten()]
     }
 
     emit:
