@@ -35,8 +35,8 @@ workflow import_samples {
                 file("${row.snp_list}", checkIfExists: true))
         } .multiMap {
             run, group, transcription_factor, background_run, fastq_files, background_files, bed_file, snp_file ->
-            fastq: [run, fastq_files, "true"]
-            background: [background_run, background_files, "false"]
+            fastq: [run, group, fastq_files, "true"]
+            background: [background_run, group, background_files, "false"]
             metadata: [run, group, transcription_factor, background_run, bed_file, snp_file]
         }
         .set { srr_ch }
