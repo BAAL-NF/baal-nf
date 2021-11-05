@@ -72,7 +72,7 @@ process fastqScreen {
     label 'parallel'
 
     input:
-    tuple val(run), path("${run}*.fastq.gz")
+    tuple val(run), val(group), val(not_background), path("${run}*.fastq.gz")
     path fastq_screen_folder
     output:
     tuple val(run), path('*screen.txt'), emit: screening_result
