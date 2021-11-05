@@ -141,13 +141,12 @@ workflow {
     // Pre-trimming filtering step - run on both samples and gDNA files
     filter_fastq_before(import_samples.out.fastq.mix(import_samples.out.background))
 
-    import_samples.out.metadata
-        .join(filter_fastq_before.out.report)
+    filter_fastq_before.out.report
         .groupTuple(by: 1)
         .map {
-            run, group, transcription_factor, bed_file, snp_file, reports ->
+            run, group, reports ->
             [group, reports.flatten()]
-        } | reportFastQC
+        } | reportFastQC 
 
     // Adapter trimming
     trimGalore(filter_fastq_before.out.result)
