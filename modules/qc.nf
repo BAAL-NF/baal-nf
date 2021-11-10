@@ -1,5 +1,5 @@
 // Initial QC prior to processing
-params.max_acceptable_unmapped = 90
+params.max_acceptable_other_genome = 1
 
 process fastQC {
     input:
@@ -125,7 +125,7 @@ process getFastqScreenResult {
     result = True
     for file in files:
         screening = pd.read_csv(file, sep='\t', skiprows=1, skipfooter=2, engine='python')
-        if (screening[screening.Genome != "Human"]["%Unmapped"].min() < ${params.max_acceptable_unmapped}):
+        if (screening[screening.Genome != "Human"]["%One_hit_one_genome"].max() > ${params.max_acceptable_other_genome}):
             result = False
             break
 
