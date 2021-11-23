@@ -51,23 +51,23 @@ workflow import_samples {
 // into their own channel for the sake of further processing.
 workflow count_fastq {
     take:
-    metadata
     fastq_files
+    metadata
 
     main:
-    metadata
-        .join(fastq_files)
+    fastq_files
         .groupTuple(by: 1)
+        .join(metadata, by:1)
         .map {
-            runs, tag, transcription_factor, bed_files, snp_files, fastq_files ->
+            tag, runs, not_background, fastq_files, run1, transcription_factor, background1, bed_files, snp_files ->
             num_samples = runs.size()
-            [ runs, groupKey(tag, num_samples), transcription_factor, bed_files, snp_files, fastq_files ]
+            [ runs, groupKey(tag, num_samples), tag, not_background, transcription_factor, bed_files, snp_files, background1, fastq_files ]
         }
         .transpose()
         .multiMap {
-            run, key, transcription_factor, bed_file, snp_file, fastq_files ->
-            fastq: [ run, fastq_files ]
-            metadata: [ run, key, transcription_factor, bed_file, snp_file ]
+            run, key, group, not_background, transcription_factor, bed_file, snp_file, background_run, fastq_files ->
+            fastq: [ run, group, not_background, fastq_files ]
+            metadata: [ run, group, transcription_factor, background_run, bed_file, snp_file ]
         }
         .set { filtered_data }
 
@@ -156,7 +156,7 @@ workflow {
 
     // Once filtering is done, we should be able to count the  number of fastq
     // files that will actually go into our analysis
-    count_fastq(import_samples.out.metadata, filter_fastq_after.out.result)
+    count_fastq(filter_fastq_after.out.result, import_samples.out.metadata)
 
     // Create BAM files for each SRR
     count_fastq.out.fastq | create_bam
