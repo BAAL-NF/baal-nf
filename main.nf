@@ -107,7 +107,11 @@ workflow filter_fastq_after {
     result = fastqc_after_trimming.out.fastq_list
                                       .join(fastq_screen.out.result)
                                       .join(fastq_list)
-    report = fastqc_after_trimming.out.report
+    // Remove group and not_background ID from fastqc out report before mixing
+    filt_fastqc_ch = fastqc_after_trimming.out.report.map {
+                                      run, group, not_background, files -> [run, files]
+                                      }
+    report = filt_fastqc_ch
                 .mix(fastq_screen.out.report)
 
     emit:
