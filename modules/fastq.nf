@@ -43,12 +43,12 @@ process createBam {
     maxRetries 3
 
     input:
-    tuple val(run), path(trimmed)
+    tuple val(run), val(group), val(not_background), path(trimmed)
     file index_files
 
     output:
-    tuple val(run), path("${run}_dedup.bam"), emit: bamfile
-    tuple val(run), path('metrics/*'), emit: report
+    tuple val(run), val(group), val(not_background), path("${run}_dedup.bam"), emit: bamfile
+    tuple val(run), val(group), val(not_background), path('metrics/*'), emit: report
     file "${run}.log"
 
     script:
@@ -105,10 +105,10 @@ process mergeBeds {
 
 process index {
     input:
-    tuple val(run), path(bamfile)
+    tuple val(run), val(group), val(not_background), path(bamfile)
 
     output:
-    tuple val(run), path(bamfile), path("${bamfile}.bai")
+    tuple val(run), val(group), val(not_background), path(bamfile), path("${bamfile}.bai")
 
     """
     samtools index ${bamfile}
