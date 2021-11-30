@@ -1,10 +1,10 @@
 # For each of the modules you can choose to not run that
 # module at all by setting the value below to 1 for the
 # modules you want to remove.
-duplication 		ignore 		1
+duplication 		ignore 		0
 kmer 				ignore 		1
 n_content 			ignore 		0
-overrepresented 	ignore 		1
+overrepresented 	ignore 		0
 quality_base 		ignore 		0
 sequence 			ignore 		0
 gc_sequence			ignore 		0
@@ -17,7 +17,7 @@ adapter				ignore		0
 # remaining after deduplication.  Measured levels below
 # these limits trigger the warning / error.
 duplication	warn	70
-duplication error	50
+duplication error	20
 
 # For the kmer module the filter is on the -log10 binomial
 # pvalue for the most significant Kmer, so 5 would be
@@ -35,7 +35,7 @@ n_content	error	20
 # at all as the proportion of the library which must be seen
 # as a single sequence
 overrepresented	warn	0.1
-overrepresented	error	1
+overrepresented	error	5
 
 # The per base quality filter uses two values, one for the value
 # of the lower quartile, and the other for the value of the
