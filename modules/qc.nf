@@ -176,7 +176,7 @@ workflow multi_qc {
         .join(report)
         .groupTuple(by: 1)
         .map {
-            run, group, transcription_factor, bed_file, snp_file, reports -> [group, reports.flatten()]
+            run, group, transcription_factor, background_file, bed_file, snp_file, reports -> [group, reports.flatten()]
         } | multiQC
 
     emit:
