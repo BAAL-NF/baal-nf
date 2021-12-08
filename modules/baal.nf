@@ -9,7 +9,8 @@ process createSampleFile {
 
     input:
     tuple(val(group_name), path(bed_file), val(runs), val(antigens),
-          path(snp_paths), path(bamfiles), path(index_files))
+          path(snp_paths), path(bamfiles), path(index_files),
+          path(bg_bamfiles), path(bg_indexfiles))
 
     output:
     tuple val(group_name), path("${group_name}.tsv")
@@ -31,7 +32,7 @@ process baalProcessBams {
     label 'baal_chip'
 
     input:
-    tuple val(group_name), path(bed_file), path(snp_file), path(bamfiles), path(index_files), path(sample_file)
+    tuple val(group_name), path(bed_file), path(snp_file), path(bamfiles), path(index_files), path(bg_bamfiles), path(bg_indexfiles), path(sample_file)
 
     output:
     tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file)
@@ -48,15 +49,24 @@ process baalProcessBams {
     samplesheet <- '${sample_file}'
 
     hets <- c('${group_name}' = '${snp_file}')
-
-    res <- new('BaalChIP', samplesheet=samplesheet, hets=hets)
-    res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=TRUE)
-    res <- QCfilter(res,
+    """
+    if (params.background_provided) {
+        script += """
+            bg_input <- list('${group_name}' = '${bg_bamfiles}')
+            res <- new('BaalChIP', samplesheet=samplesheet, hets=hets, CorrectWithgDNA = bg_input)
+            """
+    } else {
+        script += "res <- new('BaalChIP', samplesheet=samplesheet, hets=hets)\n"
+    }
+    script += """
+        res <- new('BaalChIP', samplesheet=samplesheet, hets=hets)
+        res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=TRUE)
+        res <- QCfilter(res,
                     RegionsToFilter=list('blacklist'=blacklist_hg19,
                                          'highcoverage'=pickrell2011cov1_hg19),
                     RegionsToKeep=list('UniqueMappability'=UniqueMappability50bp_hg19))
-    res <- mergePerGroup(res)
-    """
+        res <- mergePerGroup(res)
+        """
     
     if( ! params.dedup_umi ) script += "res <- filter1allele(res)\n"
 
