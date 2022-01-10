@@ -133,29 +133,6 @@ process reportFastQC {
     'exit 0'
 }
 
-// Workflow to split channels into samples and background, and then re-combine such that background bam files are appended to the end of each group
-workflow split_channels {
-    take:
-    bam_list
-
-    main:
-    bam_list.branch {
-        samps: it[2] == "true"
-        bg: it[2] == "false"
-    }
-    .set { result }
-
-    // Join these two channels by group
-    reduced = result.samps
-                .combine(result.bg, by:1)
-                .map {
-                group, run, not_background, run_bam, run_index, bg_run, is_background, bg_bam, bg_index -> [run, run_bam, run_index, bg_bam, bg_index]
-                }
-
-    emit:
-    bam_out = reduced
-}
-
 workflow {
     include { trimGalore; create_bam; mergeBeds } from './modules/fastq.nf'
     include { run_baal } from './modules/baal.nf'
@@ -198,19 +175,21 @@ workflow {
     // Maybe use the count_fastq metadata in stead
     multi_qc(count_fastq.out.metadata, reports)
 
-    // Branch pipeline based on not_background
-    split_channels(create_bam.out.bamfile)
-
     // Regroup the bam files with their associated metadata and run baal chip
     count_fastq.out.metadata
-        .join(split_channels.out.bam_out)
+        .join(create_bam.out.bamfile)
         .groupTuple(by: 1)
         .multiMap {
-            runs, group, antigens, background_runs, bedfiles, snp_files, bamfiles, index_files, bg_bamfiles, bg_index_files -> 
+            runs, group, antigens, background_runs, bedfiles, snp_files, groups, not_backgrounds, bamfiles, index_files ->
+
+                // Define function which splits based on not_background boolean value
+                def (sample, background) = GroovyCollections.transpose([runs, antigens, bamfiles, index_files, not_backgrounds]).split { run, antigen, bamfile, indexfile, bg -> bg}
+                def (bg_runs, bg_antigens, bg_sample, bg_index, bg_flags) = GroovyCollections.transpose(background)
+                def (fg_runs, fg_antigens, fg_sample, fg_index, fg_flags) = GroovyCollections.transpose(sample) 
             
             snp_files : [group, snp_files.unique()]
             bed_files : [group, bedfiles.unique()]
-            baal_files : [group, runs, antigens, snp_files.unique(), bamfiles, index_files, bg_bamfiles.unique(), bg_index_files.unique()] }
+            baal_files : [group, fg_runs, fg_antigens, snp_files.unique(), fg_sample, fg_index, bg_sample, bg_index] }
         .set { group_ch }
 
     mergeBeds(group_ch.bed_files)
