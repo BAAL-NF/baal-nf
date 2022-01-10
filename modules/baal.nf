@@ -35,7 +35,8 @@ process baalProcessBams {
     tuple val(group_name), path(bed_file), path(snp_file), path(bamfiles), path(index_files), path(bg_bamfiles), path(bg_indexfiles), path(sample_file)
 
     output:
-    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file)
+    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file), path(bg_bamfiles), path(bg_indexfi
+les)
 
     script:
     script = """
@@ -48,7 +49,7 @@ process baalProcessBams {
 
     samplesheet <- '${sample_file}'
 
-    hets <- c('${group_name}' = '${snp_file}')
+    hets <- c('${group_name}' = '${snp_file}')\n
     """
     if (params.background_provided) {
         script += """
@@ -59,7 +60,6 @@ process baalProcessBams {
         script += "res <- new('BaalChIP', samplesheet=samplesheet, hets=hets)\n"
     }
     script += """
-        res <- new('BaalChIP', samplesheet=samplesheet, hets=hets)
         res <- alleleCounts(res, min_base_quality=10, min_mapq=15, all_hets=TRUE)
         res <- QCfilter(res,
                     RegionsToFilter=list('blacklist'=blacklist_hg19,
@@ -83,7 +83,7 @@ process baalGetASB {
     label 'parallel'
 
     input:
-    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file)
+    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file), path(bg_bamfiles), path(bg_indexfiles)
     path report_md, stageAs: 'baal_report.Rmd'
 
     output:
@@ -92,14 +92,22 @@ process baalGetASB {
     path("${group_name}.rds")
 
     script:
-    """
+    script = """
     #!/usr/bin/env Rscript
     library(BaalChIP)
     library(knitr)
     library(rmarkdown)
     # Read in hets from file
     res <- readRDS("process_bams.rds")
-    res <- getASB(res, Iter=5000, conf_level=c(${params.confidence_levels.join(',')}), cores=${task.cpus}, clusterType = "PSOCK")
+    """
+
+    if (params.background_provided) {
+        script += "res <- getASB(res, Iter=5000, conf_level=c(${params.confidence_levels.join(',')}), cores=${task.cpus}, clusterType = 'PSOCK', correctBygDNA = TRUE)"
+    } else {
+        script += "res <- getASB(res, Iter=5000, conf_level=c(${params.confidence_levels.join(',')}), cores=${task.cpus}, clusterType = 'PSOCK', correctBygDNA = FALSE)"
+    }
+
+    script += """
     saveRDS(res, "${group_name}.rds")
     report <- BaalChIP.report(res)
 
@@ -120,8 +128,8 @@ workflow run_baal {
     samples = createSampleFile(baal_groups)
     baal_groups
         .map { 
-            group_name, bed_file, runs, antigens, snp_files, bamfiles, index_files -> 
-            [ group_name, bed_file, snp_files, bamfiles, index_files ] }
+            group_name, bed_file, runs, antigens, snp_files, bamfiles, index_files, bg_bamfiles, bg_indexfiles -> 
+            [ group_name, bed_file, snp_files, bamfiles, index_files, bg_bamfiles, bg_indexfiles ] }
         .join(samples) | baalProcessBams
     baalGetASB(baalProcessBams.out, file("${projectDir}/doc/baal_report.Rmd"))
 
