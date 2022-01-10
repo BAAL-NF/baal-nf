@@ -35,8 +35,7 @@ process baalProcessBams {
     tuple val(group_name), path(bed_file), path(snp_file), path(bamfiles), path(index_files), path(bg_bamfiles), path(bg_indexfiles), path(sample_file)
 
     output:
-    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file), path(bg_bamfiles), path(bg_indexfi
-les)
+    tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file), path(bg_bamfiles), path(bg_indexfiles)
 
     script:
     script = """
