@@ -7,7 +7,7 @@ process trimGalore {
 
     output:
     tuple val(run), val(group), val(not_background), path("${run}_tg*"), emit: trimmed_fastq
-    tuple val(run), val(group), val(not_background), path('*report*'), emit: report
+    tuple val(run), path('*report*'), emit: report
 
     script:
     extra_args = ''
@@ -48,7 +48,7 @@ process createBam {
 
     output:
     tuple val(run), val(group), val(not_background), path("${run}_dedup.bam"), emit: bamfile
-    tuple val(run), val(group), val(not_background), path('metrics/*'), emit: report
+    tuple val(run), path('metrics/*'), emit: report
     file "${run}.log"
 
     script:
