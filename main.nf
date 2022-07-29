@@ -70,10 +70,11 @@ workflow count_fastq {
     metadata =  filtered_data.metadata
 }
 
+include { filter_fastq as fastqc_before_trimming } from './modules/qc.nf' \
+    addParams(fastqc_conf: params.fastqc_conf_pre)
+
 // Filtering stages. These are done before and after TrimGalore.
 workflow filter_fastq_before {
-    include { filter_fastq as fastqc_before_trimming } from './modules/qc.nf' \
-        addParams(fastqc_conf: params.fastqc_conf_pre)
     take:
     fastq_list
 
@@ -86,11 +87,11 @@ workflow filter_fastq_before {
     report = fastqc_before_trimming.out.report
 }
 
+include { filter_fastq as fastqc_after_trimming; fastq_screen } from './modules/qc.nf' \
+    addParams(fastqc_conf: params.fastqc_conf_post)
+
 // After TrimGalore we also run FastQ-screen to check for contamination
 workflow filter_fastq_after {
-    include { filter_fastq as fastqc_after_trimming; fastq_screen } from './modules/qc.nf' \
-        addParams(fastqc_conf: params.fastqc_conf_post)
-
     take:
     fastq_list
 
@@ -123,12 +124,12 @@ process reportFastQC {
     'exit 0'
 }
 
-workflow {
-    include { trimGalore; create_bam; mergeBeds } from './modules/fastq.nf'
-    include { run_baal } from './modules/baal.nf'
-    include { multi_qc } from './modules/qc.nf'
-    include { process_results; create_report } from './modules/analysis.nf'
+include { trimGalore; create_bam; mergeBeds } from './modules/fastq.nf'
+include { run_baal } from './modules/baal.nf'
+include { multi_qc } from './modules/qc.nf'
+include { process_results; create_report } from './modules/analysis.nf'
 
+workflow {
     // Load CSV file
     import_samples()
 
