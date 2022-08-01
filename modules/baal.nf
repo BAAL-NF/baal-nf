@@ -37,7 +37,7 @@ process baalProcessBams {
     tuple val(group_name), path('process_bams.rds'), path(snp_file), path(bed_file)
 
     script:
-    """
+    script = """
     #!/usr/bin/env Rscript
     library(BaalChIP)
 
@@ -56,15 +56,18 @@ process baalProcessBams {
                                          'highcoverage'=pickrell2011cov1_hg19),
                     RegionsToKeep=list('UniqueMappability'=UniqueMappability50bp_hg19))
     res <- mergePerGroup(res)
-    res <- filter1allele(res)
-    saveRDS(res, file='process_bams.rds')
     """
+    
+    if( ! params.dedup_umi ) script += "res <- filter1allele(res)\n"
+
+    script += "saveRDS(res, file='process_bams.rds')\n"
+    script    
 }
 
 process baalGetASB {
     publishDir(params.baal_report_dir, mode: 'copy', pattern: "${group_name}.html")
     // Optionally export the object files
-    if (params.save_baal_objects) publishDir(params.baal_object_dir, mode: 'copy', pattern: "*.rds")
+    publishDir(params.baal_object_dir, mode: 'copy', pattern: "*.rds", enable: params.save_baal_objects)
 
     label 'baal_chip'
     label 'parallel'
@@ -86,7 +89,7 @@ process baalGetASB {
     library(rmarkdown)
     # Read in hets from file
     res <- readRDS("process_bams.rds")
-    res <- getASB(res, Iter=5000, conf_level=0.95, cores=${task.cpus}, clusterType = "PSOCK")
+    res <- getASB(res, Iter=5000, conf_level=c(${params.confidence_levels.join(',')}), cores=${task.cpus}, clusterType = "PSOCK")
     saveRDS(res, "${group_name}.rds")
     report <- BaalChIP.report(res)
 
