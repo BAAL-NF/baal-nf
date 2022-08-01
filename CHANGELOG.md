@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 ### Changed
 
+## [[0.8.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.7.0...0.8.0) - 18.10.2021
+### Changed
+- Moved imports out of workflows to support final version of DSL2
+
 ## [[0.7.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.6.1...0.7.0) - 18.10.2021
 ### Added
 - Support for multiple, configurable credible intervals.
