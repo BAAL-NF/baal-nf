@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 ### Changed
 
+## [[0.8.1]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.8.0...0.8.1) - 11.08.2022
+### Fixed
+- Resolved issue where all CIs were 95% CIs
+
 ## [[0.8.0]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.7.0...0.8.0) - 18.10.2021
 ### Changed
 - Moved imports out of workflows to support final version of DSL2
