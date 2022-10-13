@@ -113,7 +113,7 @@ workflow run_baal {
             group_name, bed_file, runs, antigens, snp_files, bamfiles, index_files -> 
             [ group_name, bed_file, snp_files, bamfiles, index_files ] }
         .join(samples) | baalProcessBams
-    baalGetASB(baalProcessBams.out, file("${projectDir}/doc/baal_report.Rmd"))
+    baalGetASB(baalProcessBams.out, file("${projectDir}/autodoc/baal_report.Rmd"))
 
     emit:
     asb = baalGetASB.out.asb
