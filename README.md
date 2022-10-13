@@ -15,6 +15,8 @@ The pipeline is run using nextflow, and currently supports execution using nativ
 
 ![Pipeline flow](img/baal_pipeline.png)
 
+For more details on the design and each process in the pipeline, see [the design docs](doc/Design.md)
+
 # Usage and Configuration
 
 The hg19 index for bowtie2 is automatically downloaded from the AWS iGenomes s3 bucket. Should you wish to download it manually, set the bowtie2_index parameter in your pipeline configuration or on the command line to point to the folder containing the required index files, i.e.
@@ -31,7 +33,7 @@ In a similar manner, reference genomes for `fastq-screen` are downloaded automat
 
 The pipeline currently supports docker, singularity and anaconda for dependency management. We recommend using docker or singularity for reproducibility, though anaconda may be used if your computing infrastructure does not support containers. 
 
-If using anaconda, you will need to manually create an anaconda environment and install our modified version of BaalChIP manually from (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP). The path to this environment should then be provided as the parameter `baal_chip_env` (see below).
+If using anaconda, you will need to manually create an anaconda environment and install our modified version of BaalChIP manually from https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP. The path to this environment should then be provided as the parameter `baal_chip_env` (see below).
 
 The following configuration profiles are available for general use
 
@@ -40,7 +42,7 @@ The following configuration profiles are available for general use
 | docker | Use the docker container engine |
 | singularity | Use the singularity container engine |
 | conda | Use anaconda environments |
-| gls | Execute using the (https://www.nextflow.io/docs/latest/google.html#cloud-life-sciences)[Google Life Sciences API] |
+| gls | Execute using the [Google Life Sciences API](https://www.nextflow.io/docs/latest/google.html#cloud-life-sciences) |
 | test | Run the pipeline test set, can be used in combination with any of the above environment profiles |
 | eddie | Platform-specific profile for the University of Edinburgh eddie cluster |
 
