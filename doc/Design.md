@@ -1,5 +1,20 @@
 # Pipeline Design
 
+# Background and Motivation
+
+# Design Decisions
+- Coarse-grained QC
+- How to handle replicates
+
+# How to add features to the pipeline
+
+# Future Work
+
+- Migrate BaalChIP to MCMC for whole monte carlo run
+- Fix BaalChIP unit tests
+- Motif calling and filtering
+- Refactor pipeline to reduce number of parameters being passed around
+
 # Stages
 
 The pipeline consists of a number of stages. See the flowchart at the end of this document for a brief overview.
@@ -25,7 +40,8 @@ The `filter_fastq` workflow uses this to discard any fastq files that do not mee
 
 ### TrimGalore
 
-Can be found in `fastq::trimGalore`.
+Process: `fastq::trimGalore`.
+
 This runs `TrimGalore` on the fastq files, to perform best-guess adapter trimming.
 No optional arguments are passed, but `TrimGalore` is called appropriately for single-stranded and double-stranded fastq files.
 
@@ -59,8 +75,6 @@ If, for any genome, less than a configurable percentage (`max_acceptable_unmappe
 
 These are the same processes, the workflow is imported twice into [`main.nf`](/main.nf) as `filter_fastq_before` and `filter_fastq_after`.
 
-
-
 ## Mapping
 
 ### Bowtie2
@@ -80,21 +94,51 @@ Marks duplicate reads.
 
 Process:`baal::createSampleFile`
 
+Creates a configuration file for use by BaalChIP (see e.g [the example files included with BaalChiP](https://github.com/InesdeSantiago/BaalChIP/blob/master/inst/test/exampleChIP.tsv)).
 
 
 ### Filter Reads and Count Instance of Each Allele
 
 Process: `baal::baalProcessBams`
 
-### getASB
+The first of two stages using the BaalChIP package. The following is done in this step
+
+- Discards all reads below a certain read quality threshold
+- Filters out reads overlapping blacklisted areas
+- Filters out duplicate reads
+- Constructs a table of heterozygous SNPs, with counts of how many reads have been observed for each allele
+- Filters out any SNPs for which only one of the two alleles have been observed
+
+### Get Allele-specific Binding Sites
+
+Process: `baal::getAsb`
+
+Runs a markov-chain monte carlo simulation based on the results from the previous step, along with input allelic ratios.
+This outputs the final allele-specific binding results.
+
+Also produces a BaalChIP report, in the form of a rendered PDF.
 
 ## Post-processing
-- multiQC
-- GAT
+
+### multiQC
+
+Collate all QC reports except for the initial run of FastQC into a single report. Inputs from
+- FastQC
+- Picard
+- Bowtie2
+- FastQ-Screen
+
+### GAT
+
+Genome Analysis Toolkit. This runs enrichment analysis, comparing called ASB sites to all heterozygous SNPs in a given cell line, and looking for enrichments in e.g. enhancers, promoters, promoter-flanking regions, etc.
+
+# Output Files and Structure
+
+# Debugging tips and tricks
 
 
 
-## Flowchart
+# Flowchart
 
 ```mermaid
 flowchart TD
