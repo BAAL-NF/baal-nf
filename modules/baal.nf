@@ -27,6 +27,23 @@ process createSampleFile {
         output
 }
 
+
+process mergeBeds {
+     publishDir("${params.report_dir}/bed_files/", mode: 'copy')
+
+     input:
+     tuple val(group_name), path(bedfiles)
+
+     output:
+     tuple val(group_name), path("${group_name}.bed")
+
+     script:
+     // Use zcat -f since it works with both gzipped and plaintext files
+     """
+     zcat -f ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
+     """
+}
+
 process baalProcessBams {
     label 'baal_chip'
 

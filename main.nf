@@ -126,8 +126,7 @@ process reportFastQC {
 
 
 include { trimGalore; create_bam } from './modules/fastq.nf'
-include { mergeBeds } from './modules/motif.nf'
-include { run_baal } from './modules/baal.nf'
+include { mergeBeds; run_baal } from './modules/baal.nf'
 include { multi_qc } from './modules/qc.nf'
 include { process_results; create_report } from './modules/analysis.nf'
 include { no_peak } from './modules/motif.nf'
