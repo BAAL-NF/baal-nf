@@ -1,9 +1,9 @@
 process bamToBed {
     input:
-    file bam_file
+    tuple val(antigen), path(bam_file)
 
     output:
-    tuple val("${bam_file}"), file("${bam_file.baseName}.bed")
+    tuple val(antigen), val("${bam_file}"), file("${bam_file.baseName}.bed")
 
     script:
     """
@@ -29,29 +29,27 @@ process mergeBeds {
 
 process profileMotifs {
     label 'parallel'
+    label 'nopeak'
 
-    container 'oalmelid/nopeak:latest'
-    publishDir("${params.report_dir}/motifs/profiles/", mode: "copy")
+    publishDir("${params.report_dir}/motifs/${antigen}/profiles/", mode: "copy")
 
     input:
-    tuple val(bam_file), path(bed_file)
+    tuple val(antigen), val(bam_file), path(bed_file)
     path genome
 
     output:
-    tuple val(bam_file), path("profile_${bed_file}.csv")
+    tuple val(bam_file), val(antigen), path("profile_${bed_file}.csv")
 
     script:
-    // FIXME: add a nopeak script to container for easy running
-    // FIXME: copy utility scripts to container
     """
-    java -jar /usr/local/lib/noPeak.jar PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${params.motif_kmer_length}
+    noPeak PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${params.motif_kmer_length}
     """
 }
 
 process getFragmentSize {
     publishDir("${params.report_dir}/spp/", mode: "copy")
     input:
-    path(bam_file)
+    tuple val(antigen), path(bam_file)
 
     output:
     tuple val("${bam_file}"), path("${bam_file.baseName}.txt")
@@ -63,11 +61,12 @@ process getFragmentSize {
 }
 
 process getMotifs {
-    container 'oalmelid/nopeak:latest'
-    publishDir("${params.report_dir}/motifs/motifs/", mode: "copy")
+    label 'nopeak'
+
+    publishDir("${params.report_dir}/motifs/${antigen}/motifs/", mode: "copy")
 
     input:
-    tuple val(bam_file), path(profile), path(fragment_size)
+    tuple val(bam_file), val(antigen), path(profile), path(fragment_size)
 
     output:
     tuple val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
@@ -75,7 +74,7 @@ process getMotifs {
     script:
     """
     FRAG_SIZE=`cat ${fragment_size} | cut -f3 | cut -d, -f1`
-    java -jar /usr/local/lib/noPeak.jar LOGO --strict --signal ${profile} --fraglen \$FRAG_SIZE --export-kmers ${bam_file}.kmers.txt > ${bam_file}.motifs.txt
+    noPeak LOGO --strict --signal ${profile} --fraglen \$FRAG_SIZE --export-kmers ${bam_file}.kmers.txt > ${bam_file}.motifs.txt
     """
 
 }
@@ -85,12 +84,10 @@ workflow no_peak {
     input
     main:
     
-    input | map { antigen, bam_file -> bam_file } | set { bam_files }
-    //| groupTuple() | mergeBeds
-    getFragmentSize(bam_files) | set { fragment_sizes }
+    getFragmentSize(input) | set { fragment_sizes }
     
     genome = file(params.nopeak_index, type: 'dir', checkIfExists: true)
-    bamToBed(bam_files) | set { pileup }
+    bamToBed(input) | set { pileup }
     profileMotifs(pileup, genome)
 
     profileMotifs.out.join(fragment_sizes) | getMotifs
