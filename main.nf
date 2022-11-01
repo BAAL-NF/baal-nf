@@ -124,10 +124,12 @@ process reportFastQC {
     'exit 0'
 }
 
-include { trimGalore; create_bam; mergeBeds } from './modules/fastq.nf'
-include { run_baal } from './modules/baal.nf'
+
+include { trimGalore; create_bam } from './modules/fastq.nf'
+include { mergeBeds; run_baal } from './modules/baal.nf'
 include { multi_qc } from './modules/qc.nf'
 include { process_results; create_report } from './modules/analysis.nf'
+include { no_peak } from './modules/motif.nf'
 
 workflow {
     // Load CSV file
@@ -168,17 +170,25 @@ workflow {
     multi_qc(count_fastq.out.metadata, reports)
 
     // Regroup the bam files with their associated metadata and run baal chip
-    count_fastq.out.metadata
-        .join(create_bam.out.bamfile)
+    merged_data = count_fastq.out.metadata.join(create_bam.out.bamfile)
+
+    merged_data
         .groupTuple(by: 1)
         .multiMap {
-            runs, group_name, antigens, bedfiles, snp_files, bamfiles, index_files -> 
+            runs, group_name, antigens, bed_files, snp_files, bam_files, index_files -> 
             
             snp_files : [group_name, snp_files.unique()]
-            bed_files : [group_name, bedfiles.unique()]
-            baal_files : [group_name, runs, antigens, snp_files.unique(), bamfiles, index_files] }
+            bed_files : [group_name, bed_files.unique()]
+            baal_files : [group_name, runs, antigens, snp_files.unique(), bam_files, index_files] }
         .set { group_ch }
 
+    // in parallel, process bam files with noPeak
+    merged_data
+        .map { run, group_name, antigen, bed_file, snp_files, bam_file, index_file -> [antigen, bam_file] }
+        .set { no_peak_input }
+
+    no_peak(no_peak_input)
+    
     mergeBeds(group_ch.bed_files)
     run_baal(mergeBeds.out.join(group_ch.baal_files))
 
