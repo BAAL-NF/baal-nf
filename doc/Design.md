@@ -132,6 +132,11 @@ Collate all QC reports except for the initial run of FastQC into a single report
 
 Genome Analysis Toolkit. This runs enrichment analysis, comparing called ASB sites to all heterozygous SNPs in a given cell line, and looking for enrichments in e.g. enhancers, promoters, promoter-flanking regions, etc.
 
+## Motif Calling
+
+
+
+
 # Output Files and Structure
 
 # Debugging tips and tricks
@@ -193,36 +198,46 @@ flowchart TD
     p48([join])
     p49([groupTuple])
     p50([multiMap])
-    p51[mergeBeds]
-    p52([join])
-    p53[run_baal:createSampleFile]
-    p54([map])
-    p55([join])
-    p56[run_baal:baalProcessBams]
-    p57(( ))
-    p58[run_baal:baalGetASB]
-    p59(( ))
+    p51([map])
+    p52[no_peak:getFragmentSize]
+    p53(( ))
+    p54[no_peak:parseFragmentSize]
+    p55[no_peak:bamToBed]
+    p56(( ))
+    p57[no_peak:profileMotifs]
+    p58([join])
+    p59[no_peak:getMotifs]
     p60(( ))
-    p61[process_results:overlapPeaks]
+    p61[mergeBeds]
     p62([join])
-    p63(( ))
-    p64[process_results:makeGatBedFiles]
-    p65(( ))
-    p66[process_results:runGat]
-    p67([map])
-    p68([map])
-    p69([map])
-    p70([join])
-    p71([join])
-    p72([map])
-    p73([join])
-    p74([collectFile])
+    p63[run_baal:createSampleFile]
+    p64([map])
+    p65([join])
+    p66[run_baal:baalProcessBams]
+    p67(( ))
+    p68[run_baal:baalGetASB]
+    p69(( ))
+    p70(( ))
+    p71[process_results:overlapPeaks]
+    p72([join])
+    p73(( ))
+    p74[process_results:makeGatBedFiles]
     p75(( ))
+    p76[process_results:runGat]
+    p77([map])
+    p78([map])
+    p79([map])
+    p80([join])
+    p81([join])
+    p82([map])
+    p83([join])
+    p84([collectFile])
+    p85(( ))
     p0 --> p1
     p1 --> p2
     p2 --> p3
-    p3 -->|metadata| p11
     p3 -->|fastq_list| p5
+    p3 -->|metadata| p11
     p4 -->|fastqc_conf| p5
     p5 --> p6
     p6 --> p7
@@ -275,38 +290,49 @@ flowchart TD
     p44 --> p45
     p45 --> p46
     p46 --> p47
-    p47 -->|multiqc_results| p67
+    p47 -->|multiqc_results| p77
     p35 -->|metadata| p48
-    p48 --> p49
+    p48 -->|merged_data| p49
     p49 --> p50
-    p50 --> p52
-    p50 -->|snp_files| p62
-    p50 --> p51
-    p51 --> p52
-    p52 -->|baal_groups| p53
-    p53 --> p55
-    p52 -->|baal_groups| p54
-    p54 --> p55
-    p55 --> p56
-    p56 --> p58
-    p57 -->|report_md| p58
-    p58 -->|baal_results| p61
-    p58 -->|asb_report| p68
+    p50 -->|snp_files| p72
+    p50 --> p62
+    p50 --> p61
+    p48 -->|merged_data| p51
+    p51 -->|input| p52
+    p52 --> p54
+    p53 -->|parse_script| p54
+    p54 --> p58
+    p51 -->|input| p55
+    p55 --> p57
+    p56 -->|genome| p57
+    p57 --> p58
     p58 --> p59
-    p60 -->|script| p61
-    p61 -->|overlap_peaks_results| p62
-    p62 --> p64
-    p63 -->|bedfile_script| p64
-    p64 --> p66
-    p65 -->|annotations| p66
-    p66 -->|gat_results| p72
-    p67 -->|multiqc_flat| p71
-    p68 -->|asb_output| p70
-    p61 -->|overlap_peaks_results| p69
-    p69 -->|overlap_peaks_results| p70
-    p70 --> p71
-    p71 -->|combined_results| p73
-    p72 -->|gat_results| p73
-    p73 -->|combined_results| p74
-    p74 --> p75
+    p59 --> p60
+    p61 --> p62
+    p62 -->|baal_groups| p63
+    p63 --> p65
+    p62 -->|baal_groups| p64
+    p64 --> p65
+    p65 --> p66
+    p66 --> p68
+    p67 -->|report_md| p68
+    p68 -->|baal_results| p71
+    p68 -->|asb_report| p78
+    p68 --> p69
+    p70 -->|script| p71
+    p71 -->|overlap_peaks_results| p72
+    p72 --> p74
+    p73 -->|bedfile_script| p74
+    p74 --> p76
+    p75 -->|annotations| p76
+    p76 -->|gat_results| p82
+    p77 -->|multiqc_flat| p81
+    p78 -->|asb_output| p80
+    p71 -->|overlap_peaks_results| p79
+    p79 -->|overlap_peaks_results| p80
+    p80 --> p81
+    p81 -->|combined_results| p83
+    p82 -->|gat_results| p83
+    p83 -->|combined_results| p84
+    p84 --> p85
 ```
