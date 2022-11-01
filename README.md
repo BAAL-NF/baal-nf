@@ -81,6 +81,7 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 | run_gat | `true` | Whether to run GAT enrichment analysis against the ENSEMBL genome annotations | No
 | baal_chip_env | null | Only required when using the conda profile. Path to conda environment containing BaalChIP | Yes, if using the conda profile
 | save_baal_objects | false | Export BaalChIP objects as RDS files | No
+| motif_kmer_length | 8 | kmer length used by NoPeak when doing motif calling. 8-12 is recommended. | No
 
 # ToDo
 
