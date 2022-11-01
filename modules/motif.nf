@@ -3,7 +3,7 @@ process bamToBed {
     tuple val(antigen), path(bam_file)
 
     output:
-    tuple val(antigen), val("${bam_file}"), file("${bam_file.baseName}.bed")
+    tuple val(antigen), path(bam_file), path("${bam_file.baseName}.bed")
 
     script:
     """
@@ -18,11 +18,11 @@ process profileMotifs {
     publishDir("${params.report_dir}/motifs/${antigen}/profiles/", mode: "copy")
 
     input:
-    tuple val(antigen), val(bam_file), path(bed_file)
+    tuple val(antigen), path(bam_file), path(bed_file)
     path genome
 
     output:
-    tuple val(bam_file), val(antigen), path("profile_${bed_file}.csv")
+    tuple val(antigen), path(bam_file),  path("profile_${bed_file}.csv")
 
     script:
     """
@@ -31,16 +31,30 @@ process profileMotifs {
 }
 
 process getFragmentSize {
-    publishDir("${params.report_dir}/spp/", mode: "copy")
+    publishDir("${params.report_dir}/motifs/${antigen}/spp/", mode: "copy")
     input:
     tuple val(antigen), path(bam_file)
 
     output:
-    tuple val("${bam_file}"), path("${bam_file.baseName}.txt")
+    tuple val(antigen), path(bam_file), path("${bam_file.baseName}.txt")
 
     script:
     """
     run_spp.R -c=${bam_file} -out=${bam_file.baseName}.txt
+    """
+}
+
+process parseFragmentSize {
+    input:
+    tuple val(antigen), path(bam_file), path(spp_output)
+    path parse_script
+
+    output:
+    tuple val(antigen), val("${bam_file}"), path("${bam_file.baseName}.fragment_size.txt")
+
+    script:
+    """
+    python ${parse_script} ${spp_output} ${bam_file.baseName}.fragment_size.txt
     """
 }
 
@@ -50,15 +64,15 @@ process getMotifs {
     publishDir("${params.report_dir}/motifs/${antigen}/motifs/", mode: "copy")
 
     input:
-    tuple val(bam_file), val(antigen), path(profile), path(fragment_size)
+    tuple  val(antigen), val(bam_file), path(profile), path(fragment_size)
 
     output:
     tuple val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
 
     script:
     """
-    FRAG_SIZE=`cat ${fragment_size} | cut -f3 | cut -d, -f1`
-    noPeak LOGO --strict --signal ${profile} --fraglen \$FRAG_SIZE --export-kmers ${bam_file}.kmers.txt > ${bam_file}.motifs.txt
+    FRAGMENT_SIZE=`cat ${fragment_size}`
+    noPeak LOGO --strict --signal ${profile} --fraglen \$FRAGMENT_SIZE --export-kmers ${bam_file}.kmers.txt > ${bam_file}.motifs.txt
     """
 
 }
@@ -66,13 +80,16 @@ process getMotifs {
 workflow no_peak {
     take:
     input
+
     main:
-    
-    getFragmentSize(input) | set { fragment_sizes }
+
+    parse_script = file("${projectDir}/py/get_fragment_sizes.py")
+    getFragmentSize(input) | set { spp_output }
+    parseFragmentSize(spp_output, parse_script)
     
     genome = file(params.nopeak_index, type: 'dir', checkIfExists: true)
     bamToBed(input) | set { pileup }
     profileMotifs(pileup, genome)
 
-    profileMotifs.out.join(fragment_sizes) | getMotifs
+    profileMotifs.out.join(parseFragmentSize.out, by:[0,1] ) | getMotifs
 }
