@@ -1,12 +1,75 @@
 # Pipeline Design
 
-# Background and Motivation
-
 # Design Decisions
-- Coarse-grained QC
-- How to handle replicates
 
-# How to add features to the pipeline
+The pipeline was built to process a large amount of data, with limited knowledge about data quality, provenance, and negative controls.
+As such, the design focuses on processing large amounts of data with coarse-grained but restrictive QC filters.
+Several modifications have also been made to the BaalChIP package to accomodate bulk processing of data.
+
+## Coarse-grained QC
+
+We use FastQC and FastQ-screen to perform go/no-go filtering.
+Automated adapter trimming is done with trim galore with default arguments.
+Which files are kept or filtered out can most easily be deduced by looking at the MultiQC report for a given transcription factor and cell line.
+
+These filters are intended to be strict, but coarse-grained. Some fine-tuning based on what data is included might be desirable for individual experiments.
+In the future it might be desirable to e.g. add a flag to disable QC, and do manual QC on a per-experiment basis before running the pipeline.
+
+## Changes to BaalChIP
+
+### Replicate handling
+
+BaalChIP originally filtered out any SNPs where, for each replicate, at least one read overlapping the reference and alternate allele was found.
+For our purposes this was found to be overly restrictive, since a single low-read-count file could thereby disable ASB detection for all input files for a given TF/Cell Line combination.
+
+We modified BaalChIP to pool reads from all replicates before performing any filtering.
+This has the advantage of being easy to implement, though a more fine-grained filtering where e.g. we require overlapping reads in each technical replicate for a given experiment, but pool across experiments would likely help with filtering out noise.
+
+### Peak filtering
+
+We introduced an option in alleleCounts (`all_hets=False`) to not filter out SNPs that fall outside ChIP-seq peaks. 
+In stead, the output file from BaalChIP contains an additional boolean column (`peak`),indicating whether the given SNP was found to be within a peak or not.
+
+### Performance optimisation
+
+Previously, BaalChIP paralellised the markov chain monte carlo simulation, but returned the whole random walk to the main thread before computing summary statistics.
+We have altered this behaviour by computing the summary statistics within each thread, thereby reducing memory and communications overhead significantly.
+We have observed this leading to a ten-fold reduction in memory footprint and a two-fold increase in speed in some datasets.
+
+### Flexible clustering methods
+
+We have introduced a `clusterType` argument to `getASB`, allowing the end user to choose what type of cluster to utilise in an agnostic manner. It defaults to `PSOCK`.
+Available cluster types are any that work with `parallel::makeCluster`, i.e. `PSOCK`, `FORK`, and any other type that can be passed to `snow`.
+See [the parallel docs](https://www.rdocumentation.org/packages/parallel/versions/3.6.2/topics/makeCluster) for further details.
+
+### Cluster worker log
+
+We add the argument `workerLog` to `getAsb`.
+This defaults to `nullfile`, but can be changed to write logs from each cluster worker to a file for debugging.
+This can be particularly useful if the pipeline fails silently in the `getASB` stage.
+
+### Multiple credible intervals
+
+We have modified BaalChIP to support outputting multiple credible intervals in the following way.
+
+If `conf_level` is a single number, BaalChIP behaves as before.
+If `conf_level` is a vector, BaalChIP treats the first element of the vector as the basis for its usual output, including for ASB calling.
+This first confidence level forms the basis for the output columns `Bayes_lower` and `Bayes_upper`.
+Any additional confidence levels are output as `conf_{level}_lower`/`conf_{level}_upper`, where level is the requisite confidence level as a float (e.g. `conf_0.99_upper`).
+
+### Output standard deviations from MCMC
+
+We introduce an additional output column, `Bayes_SD`, which contains the standard deviation as observed based on the MCMC random walk.
+
+### Bugfix: handle cases where only one technical replicate exists
+
+BaalChIP had some faulty handling of cases where only one technical replicate existed for a given sample.
+We have made this code more robust.
+
+
+# How to Add Features to the Pipeline
+
+## Building Containers
 
 # Future Work
 
@@ -14,6 +77,7 @@
 - Fix BaalChIP unit tests
 - Motif calling and filtering
 - Refactor pipeline to reduce number of parameters being passed around
+- Allow for other genomes than hg19
 
 # Stages
 
@@ -118,6 +182,36 @@ This outputs the final allele-specific binding results.
 
 Also produces a BaalChIP report, in the form of a rendered PDF.
 
+## Motif Calling
+
+Motif calling is done using [NoPeak](https://github.com/menzel/nopeak).
+See the NoPeak repository for details, along with the [associated paper](https://pubmed.ncbi.nlm.nih.gov/32991679/).
+Note that since NoPeak's analysis method depends on knowing the fragment length, each fastq file ends up with its own set of called motifs.
+Further post-processing (i.e. filtering, qc and clustering) would need to be done to make use of these motifs.
+
+### Profiling
+
+Processes:
+- `no_peak::bamToBed`
+- `no_peak::profileMotifs`
+
+This performs a pileup and produces a bed file, which is then used to count all k-mers present in the data.
+
+### Estimating fragment sizes
+
+Processes:
+- `no_peak::getFragmentSize`
+- `no_peak::parseFragmentSize`
+
+Phantompeakqualtools is used to estimate the fragment size of the sequencing file based on normalized strand cross-correlation.
+We pick the highest-probability nonzero fragment length and use that for all subsequent analysis.
+
+### Motif calling
+
+Process: `no_peak::getMotifs`
+All of the above is combined to perform no peak's motif calling.
+Motif calls per fastq file are output to `reports/motifs/<Transcription Factor>/motifs`
+
 ## Post-processing
 
 ### multiQC
@@ -131,13 +225,6 @@ Collate all QC reports except for the initial run of FastQC into a single report
 ### GAT
 
 Genome Analysis Toolkit. This runs enrichment analysis, comparing called ASB sites to all heterozygous SNPs in a given cell line, and looking for enrichments in e.g. enhancers, promoters, promoter-flanking regions, etc.
-
-## Motif Calling
-
-
-
-
-# Output Files and Structure
 
 # Debugging tips and tricks
 

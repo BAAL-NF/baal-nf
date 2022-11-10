@@ -85,7 +85,22 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 | save_baal_objects | false | Export BaalChIP objects as RDS files | No
 | motif_kmer_length | 8 | kmer length used by NoPeak when doing motif calling. 8-12 is recommended. | No
 
-# ToDo
+# Output Files and Structure
 
-- Automatic export to SQL or SQLite database
-- Configurable genomes
+All output files are in the folder specied by `params.report_dir`, by default this is the subdirectory `reports` within the launch directory for the pipeline.
+The report directory contains the following subfolders.
+
+## `asb`
+
+This folder contains the output of BaalChIP.
+See [the BaalChIP documentation](https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP/-/blob/dev/vignettes/BaalChIP.Rmd) for details on this.
+
+## `baal_objects`
+
+Only available when `params.save_baal_objects` is set to `true`.
+RDS files produced by BaalChIP when counting reads overlapping each allele of a SNP.
+These files are mainly useful for debugging.
+
+## `baal_reports`
+
+BaalChIP run summary as a pdf.
