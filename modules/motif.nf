@@ -22,7 +22,7 @@ process profileMotifs {
     path genome
 
     output:
-    tuple val(antigen), path(bam_file),  path("profile_${bed_file}.csv")
+    tuple val(antigen), val("${bam_file}"),  path("profile_${bed_file}.csv")
 
     script:
     """
