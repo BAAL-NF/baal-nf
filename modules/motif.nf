@@ -13,6 +13,7 @@ process bamToBed {
 
 process profileMotifs {
     label 'parallel'
+    label 'bigmem'
     label 'nopeak'
 
     publishDir("${params.report_dir}/motifs/${antigen}/profiles/", mode: "copy")
