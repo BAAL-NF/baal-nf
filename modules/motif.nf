@@ -13,6 +13,7 @@ process bamToBed {
 
 process profileMotifs {
     label 'parallel'
+    label 'bigmem'
     label 'nopeak'
 
     publishDir("${params.report_dir}/motifs/${antigen}/profiles/", mode: "copy")
@@ -22,7 +23,7 @@ process profileMotifs {
     path genome
 
     output:
-    tuple val(antigen), path(bam_file),  path("profile_${bed_file}.csv")
+    tuple val(antigen), val("${bam_file}"),  path("profile_${bed_file}.csv")
 
     script:
     """
