@@ -13,8 +13,6 @@ Baal-NF is a pipeline for computing allele-specific binding variants (ASBVs) in 
 It features quality checking and reporting using fastqc, fastq-screen and multiqc, and uses the [BaalChIP](https://github.com/InesdeSantiago/BaalChIP) R package for the detection of ASBVs.
 The pipeline is run using nextflow, and currently supports execution using native environments, anaconda, docker and singularity.
 
-![Pipeline flow](img/baal_pipeline.png)
-
 For more details on the design and each process in the pipeline, see [the design docs](doc/Design.md)
 
 # Usage and Configuration
@@ -104,3 +102,37 @@ These files are mainly useful for debugging.
 ## `baal_reports`
 
 BaalChIP run summary as a pdf.
+This contains information about corrections for RAF and CNV, as well as details on filtering done by BaalChIP.
+
+## `bed_files`
+
+The result of taking the union of all peak call bed files in the source directory.
+
+## `enrichment`
+
+Output from GAT, these calculate the relative enrichment of ASB sites in various regions of the genome, compared to a background of all heterozygous SNPs in the given cell line.
+
+## `logs`
+
+Logs from bowtie2 and umi_tools (`dedup`).
+
+## `motifs`
+
+Motif calls and kmer profiles as produced by NoPeak.
+
+## `multiQC`
+
+Collated QC reports from multiQC.
+This report combines the reports from fastqc, fastq-screen, bowtie2 and picard into one report.
+
+## `pipeline_info`
+
+Nextflow reports, including pipeline performance statistics, timelines, a trace report, a diagram of the DAG and a CSV file summarising the completed sets of cell lines and transcription factors.
+
+## `preFastQC`
+
+FastQC reports for the initial QC run.
+
+## `samples`
+
+Sample files provided to BaalChIP. These contain details on which sequencing runs were included in the ASB calculation.

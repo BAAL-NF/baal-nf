@@ -8,7 +8,7 @@ RANDOM := $(shell bash -c 'echo $$RANDOM')
 image: .docker.log
 
 .docker.log: Dockerfile env/* scripts/*
-	DOCKER_BUILDKIT=1 docker build --build-arg BUILD_FORCE=${RANDOM} --progress=plain --secret id=gitlab,src=gitlab_creds.sh -t baal-chip-env:$(TAG) . 2>&1 | tee .docker.log
+	DOCKER_BUILDKIT=1 docker build --build-arg BUILD_FORCE=${RANDOM} --progress=plain --secret id=gitlab,src=credentials.sh -t baal-chip-env:$(TAG) . 2>&1 | tee .docker.log
 
 publish: image
 	docker tag $(LOCAL_IMAGE):$(TAG) $(REMOTE_IMAGE):$(TAG)

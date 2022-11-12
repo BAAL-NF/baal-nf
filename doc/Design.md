@@ -6,20 +6,37 @@ The pipeline was built to process a large amount of data, with limited knowledge
 As such, the design focuses on processing large amounts of data with coarse-grained but restrictive QC filters.
 Several modifications have also been made to the BaalChIP package to accomodate bulk processing of data.
 
+We have aligned as much as possible in package choices with the [nf-core chipseq pipeline](https://github.com/nf-core/chipseq), though crucially some of their read filtering has not been implemented, and might be desirable.
+
+## Relevant Packages
+
+Most of the packages used in this pipeline are common to most NGS pipelines.
+We do, however, use a few less well-known packages, as detailed below.
+
+- [BaalChIP](https://github.com/InesdeSantiago/BaalChIP) - [Paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-017-1165-7)
+- [NoPeak](https://github.com/menzel/nopeak) - [Paper](https://pubmed.ncbi.nlm.nih.gov/32991679/)
+- [GAT](https://github.com/AndreasHeger/gat) - [Paper](https://pubmed.ncbi.nlm.nih.gov/23782611/)
+- [GimmeMotifs](https://github.com/vanheeringen-lab/gimmemotifs) - [Paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3018809/)
+
 ## Coarse-grained QC
 
 We use FastQC and FastQ-screen to perform go/no-go filtering.
 Automated adapter trimming is done with trim galore with default arguments.
 Which files are kept or filtered out can most easily be deduced by looking at the MultiQC report for a given transcription factor and cell line.
 
-These filters are intended to be strict, but coarse-grained. Some fine-tuning based on what data is included might be desirable for individual experiments.
+These filters are intended to be lenient and coarse-grained, to remove e.g. contaminated or very low read-quality samples that might pollute the results.
+We performed some initial testing with stricter QC requirements and found no appreciable difference in pipeline output.
+
+Some fine-tuning based on what data is included might be desirable for individual experiments.
 In the future it might be desirable to e.g. add a flag to disable QC, and do manual QC on a per-experiment basis before running the pipeline.
+
+See the sections below on FastQC and Fastq-screen for details on the filtering criteria.
 
 ## Changes to BaalChIP
 
 ### Replicate handling
 
-BaalChIP originally filtered out any SNPs where, for each replicate, at least one read overlapping the reference and alternate allele was found.
+BaalChIP originally filtered out any SNPs where, for each replicate, all reads covered only one of the two alleles.
 For our purposes this was found to be overly restrictive, since a single low-read-count file could thereby disable ASB detection for all input files for a given TF/Cell Line combination.
 
 We modified BaalChIP to pool reads from all replicates before performing any filtering.
@@ -28,7 +45,7 @@ This has the advantage of being easy to implement, though a more fine-grained fi
 ### Peak filtering
 
 We introduced an option in alleleCounts (`all_hets=False`) to not filter out SNPs that fall outside ChIP-seq peaks. 
-In stead, the output file from BaalChIP contains an additional boolean column (`peak`),indicating whether the given SNP was found to be within a peak or not.
+In stead, the output file from BaalChIP contains an additional boolean column (`peak`), indicating whether the given SNP was found to be within a peak or not.
 
 ### Performance optimisation
 
@@ -55,7 +72,7 @@ We have modified BaalChIP to support outputting multiple credible intervals in t
 If `conf_level` is a single number, BaalChIP behaves as before.
 If `conf_level` is a vector, BaalChIP treats the first element of the vector as the basis for its usual output, including for ASB calling.
 This first confidence level forms the basis for the output columns `Bayes_lower` and `Bayes_upper`.
-Any additional confidence levels are output as `conf_{level}_lower`/`conf_{level}_upper`, where level is the requisite confidence level as a float (e.g. `conf_0.99_upper`).
+Any additional confidence levels are output as `conf_{level}_lower`/`conf_{level}_upper`, where level is the requisite confidence level as a float (e.g. `conf_0.99_upper` for a 99% credible interval).
 
 ### Output standard deviations from MCMC
 
@@ -66,18 +83,38 @@ We introduce an additional output column, `Bayes_SD`, which contains the standar
 BaalChIP had some faulty handling of cases where only one technical replicate existed for a given sample.
 We have made this code more robust.
 
-
 # How to Add Features to the Pipeline
+
+Standard git workflows for development are used.
+That means in particular that all features should initially be developed and tested on a branch, before being merged to master.
+
+To cut a release, simply tag the relevant commit on master, and make sure to update the version number in nextflow.config accordingly.
+There's a [changelog](/CHANGELOG.md), which should preferably be kept up to date as part of any merge request.
 
 ## Building Containers
 
-# Future Work
+The pipeline currently uses three containers.
+These are
 
-- Migrate BaalChIP to MCMC for whole monte carlo run
-- Fix BaalChIP unit tests
-- Motif calling and filtering
-- Refactor pipeline to reduce number of parameters being passed around
-- Allow for other genomes than hg19
+- nopeak
+- BaalChIP
+- baal-nf-env
+
+The nopeak dockerfile has been passed upstream to the [NoPeak repository](https://github.com/menzel/nopeak).
+We use our own version of the container, which currently exists in `docker://oalmelid/nopeak:latest`.
+
+The remaining two dockerfiles are currently in this repository in the [containers](/containers/) subdirectory.
+Each subfolder has a makefile with e.g. container tags, current labels and versions.
+
+The BaalChIP container should arguably be moved to the BaalChIP repository and offered to the package creators.
+However, since we are building from an internal gitlab version of that repository, it currently resides here.
+To build the BaalChIP container, you will need to create a shell script named credentials.sh which exports two environment variables.
+These are
+```
+DOCKER_GITLAB_USER
+DOCKER_GITLAB_PW
+```
+This file should never be checked into git.
 
 # Stages
 
@@ -111,6 +148,7 @@ No optional arguments are passed, but `TrimGalore` is called appropriately for s
 
 Trim galore produces a report, which is collated alongside other reports and provided to multiQC later.
 
+
 ### Fetching FastqScreen files
 
 Process: `qc::fetchFastqScreenFiles`
@@ -141,16 +179,20 @@ These are the same processes, the workflow is imported twice into [`main.nf`](/m
 
 ## Mapping
 
-### Bowtie2
+### Mapping and Deduplication
 
 Process: `fastq::createBam`
-Maps using the `hg19` reference genome from igenomes by default.
+
+To save on disk space, this process does mapping (using bowtie2), duplicate marking (using picard) or UMI deduplication (using umi_tools), and converts the output to a BAM file using samtools.
+
+Mapping uses the `hg19` reference genome from igenomes by default.
 Note that if you change the reference genome you will also need to modify the use of BaalChIP to use different blacklists when doing variant calling.
 
-### picard
+### Indexing
 
-Process: `fastq::markDuplicates`
-Marks duplicate reads.
+Process: `fastq::index`
+
+Indexing of the mapped reads is performed using samtools.
 
 ## BaalChIP
 
@@ -228,7 +270,29 @@ Genome Analysis Toolkit. This runs enrichment analysis, comparing called ASB sit
 
 # Debugging tips and tricks
 
+## Test profile
 
+For quick tests of pipeline changes, there is a [test dataset on github](https://github.com/oalmelid/baal-nf-test-data).
+To run the pipeline with the test dataset, launch the pipeline with `-profile test`.
+
+## Container issues
+
+Debugging e.g. missing dependencies within a container can be difficult.
+If you need to inspect a container, bear in mind that you can get a shell inside it using e.g.
+
+```bash
+docker run -it <container-name> /bin/bash
+```
+
+This can be particularly useful for just checking if a given package is installed and available within the container.
+
+# Future Work
+
+- Migrate BaalChIP to MCMC for whole monte carlo run
+- Fix BaalChIP unit tests
+- Motif calling and filtering
+- Refactor pipeline to reduce number of parameters being passed around
+- Allow for other genomes than hg19
 
 # Flowchart
 
