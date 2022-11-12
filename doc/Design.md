@@ -1,5 +1,7 @@
 # Pipeline Design
 
+
+
 # Design Decisions
 
 The pipeline was built to process a large amount of data, with limited knowledge about data quality, provenance, and negative controls.
@@ -89,7 +91,7 @@ Standard git workflows for development are used.
 That means in particular that all features should initially be developed and tested on a branch, before being merged to master.
 
 To cut a release, simply tag the relevant commit on master, and make sure to update the version number in nextflow.config accordingly.
-There's a [changelog](/CHANGELOG.md), which should preferably be kept up to date as part of any merge request.
+There's a [changelog](/CHANGELOG.md), which shouldbe kept up to date as part of any merge request.
 
 ## Building Containers
 
@@ -115,6 +117,10 @@ DOCKER_GITLAB_USER
 DOCKER_GITLAB_PW
 ```
 This file should never be checked into git.
+
+All other bioinformatics tools are in the baal-nf-env container.
+This container is based off of the nf-core container, and as such is anaconda-based.
+To add a package, modify [environment.yml](/containers/tools/env/environment.yml) and rebuild the container.
 
 # Stages
 
