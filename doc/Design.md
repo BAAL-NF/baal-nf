@@ -1,6 +1,8 @@
 # Pipeline Design
 
+This document is intended to detail all processes in the pipeline, what their intended purpose is, any design decisions that have been made, and possible future modifications.
 
+Notes on data curation will be provided in a separate document in the relevant pipeline run repository.
 
 # Design Decisions
 
@@ -23,7 +25,7 @@ We do, however, use a few less well-known packages, as detailed below.
 ## Coarse-grained QC
 
 We use FastQC and FastQ-screen to perform go/no-go filtering.
-Automated adapter trimming is done with trim galore with default arguments.
+Automated adapter trimming is done with TrimGalore with default arguments.
 Which files are kept or filtered out can most easily be deduced by looking at the MultiQC report for a given transcription factor and cell line.
 
 These filters are intended to be lenient and coarse-grained, to remove e.g. contaminated or very low read-quality samples that might pollute the results.
@@ -41,17 +43,17 @@ See the sections below on FastQC and Fastq-screen for details on the filtering c
 BaalChIP originally filtered out any SNPs where, for each replicate, all reads covered only one of the two alleles.
 For our purposes this was found to be overly restrictive, since a single low-read-count file could thereby disable ASB detection for all input files for a given TF/Cell Line combination.
 
-We modified BaalChIP to pool reads from all replicates before performing any filtering.
+We modified BaalChIP to pool reads from all replicates before filtering on allele counts.
 This has the advantage of being easy to implement, though a more fine-grained filtering where e.g. we require overlapping reads in each technical replicate for a given experiment, but pool across experiments would likely help with filtering out noise.
 
 ### Peak filtering
 
 We introduced an option in alleleCounts (`all_hets=False`) to not filter out SNPs that fall outside ChIP-seq peaks. 
-In stead, the output file from BaalChIP contains an additional boolean column (`peak`), indicating whether the given SNP was found to be within a peak or not.
+In stead, the output file from baal-nf contains an additional boolean column (`peak`), indicating whether the given SNP was found to be within a peak or not. See the section on `overlapPeaks` below.
 
 ### Performance optimisation
 
-Previously, BaalChIP paralellised the markov chain monte carlo simulation, but returned the whole random walk to the main thread before computing summary statistics.
+Previously, BaalChIP parallelised the markov chain monte carlo simulation across SNPs, but returned the whole random walk to the main thread before computing summary statistics.
 We have altered this behaviour by computing the summary statistics within each thread, thereby reducing memory and communications overhead significantly.
 We have observed this leading to a ten-fold reduction in memory footprint and a two-fold increase in speed in some datasets.
 
@@ -59,7 +61,7 @@ We have observed this leading to a ten-fold reduction in memory footprint and a 
 
 We have introduced a `clusterType` argument to `getASB`, allowing the end user to choose what type of cluster to utilise in an agnostic manner. It defaults to `PSOCK`.
 Available cluster types are any that work with `parallel::makeCluster`, i.e. `PSOCK`, `FORK`, and any other type that can be passed to `snow`.
-See [the parallel docs](https://www.rdocumentation.org/packages/parallel/versions/3.6.2/topics/makeCluster) for further details.
+See [the R parallel docs](https://www.rdocumentation.org/packages/parallel/versions/3.6.2/topics/makeCluster) for further details.
 
 ### Cluster worker log
 
@@ -91,7 +93,7 @@ Standard git workflows for development are used.
 That means in particular that all features should initially be developed and tested on a branch, before being merged to master.
 
 To cut a release, simply tag the relevant commit on master, and make sure to update the version number in nextflow.config accordingly.
-There's a [changelog](/CHANGELOG.md), which shouldbe kept up to date as part of any merge request.
+There's a [changelog](/CHANGELOG.md), which should be kept up to date as part of any merge request.
 
 ## Building Containers
 
@@ -99,7 +101,7 @@ The pipeline currently uses three containers.
 These are
 
 - nopeak
-- BaalChIP
+- baal-chip-env
 - baal-nf-env
 
 The nopeak dockerfile has been passed upstream to the [NoPeak repository](https://github.com/menzel/nopeak).
@@ -108,15 +110,15 @@ We use our own version of the container, which currently exists in `docker://oal
 The remaining two dockerfiles are currently in this repository in the [containers](/containers/) subdirectory.
 Each subfolder has a makefile with e.g. container tags, current labels and versions.
 
-The BaalChIP container should arguably be moved to the BaalChIP repository and offered to the package creators.
+The baal-chip-env container should arguably be moved to the BaalChIP repository and offered to the package creators.
 However, since we are building from an internal gitlab version of that repository, it currently resides here.
-To build the BaalChIP container, you will need to create a shell script named credentials.sh which exports two environment variables.
+To build the BaalChIP container, you will need to create a shell script named `credentials.sh` inside the container folder which exports two environment variables.
 These are
 ```
 DOCKER_GITLAB_USER
 DOCKER_GITLAB_PW
 ```
-This file should never be checked into git.
+This file should never be checked into git, `.gitignore` has an entry for `credentials.sh` to this end.
 
 All other bioinformatics tools are in the baal-nf-env container.
 This container is based off of the nf-core container, and as such is anaconda-based.
@@ -161,7 +163,7 @@ Process: `qc::fetchFastqScreenFiles`
 
 This process stores the reference genomes required by `FastqScreen` in a configurable folder as designated by `fastq_screen_cache`.
 This step is only run once per user.
-If the folder already exists, this process will not run.
+If the folder already exists, the process will not run.
 
 ### FastQ-screen
 
@@ -192,7 +194,7 @@ Process: `fastq::createBam`
 To save on disk space, this process does mapping (using bowtie2), duplicate marking (using picard) or UMI deduplication (using umi_tools), and converts the output to a BAM file using samtools.
 
 Mapping uses the `hg19` reference genome from igenomes by default.
-Note that if you change the reference genome you will also need to modify the use of BaalChIP to use different blacklists when doing variant calling.
+Note that if you change the reference genome you will also need to modify the `getASB` process to use different blacklists when doing variant calling.
 
 ### Indexing
 
@@ -228,14 +230,28 @@ Process: `baal::getAsb`
 Runs a markov-chain monte carlo simulation based on the results from the previous step, along with input allelic ratios.
 This outputs the final allele-specific binding results.
 
-Also produces a BaalChIP report, in the form of a rendered PDF.
+Also produces a BaalChIP report, in the form of an HTML document.
+This report contains some summary statistics about e.g. RAF correction and number of ASB sites called.
+
+### Combine peak calls
+
+Process: 
+
+### Overlap ASB results with peak calls
+
+Processes: 
+- `baal::mergeBeds`
+- `analysis::overlapPeaks`
+
+This takes all peak call files corresponding to the fastq files that were used for ASB detection, takes their union, and then adds a `peak` column to the output from BaalChIP.
+The added column is a boolean, and indicates whether the SNP was found to be within a peak or not.
 
 ## Motif Calling
 
 Motif calling is done using [NoPeak](https://github.com/menzel/nopeak).
 See the NoPeak repository for details, along with the [associated paper](https://pubmed.ncbi.nlm.nih.gov/32991679/).
 Note that since NoPeak's analysis method depends on knowing the fragment length, each fastq file ends up with its own set of called motifs.
-Further post-processing (i.e. filtering, qc and clustering) would need to be done to make use of these motifs.
+Further post-processing (i.e. filtering, qc and clustering) might need to be done to make use of these motifs.
 
 ### Profiling
 
@@ -243,7 +259,7 @@ Processes:
 - `no_peak::bamToBed`
 - `no_peak::profileMotifs`
 
-This performs a pileup and produces a bed file, which is then used to count all k-mers present in the data.
+This performs a pileup of all mapped reads and produces a bed file, which is then used to count all k-mers present in the data.
 
 ### Estimating fragment sizes
 
@@ -257,12 +273,15 @@ We pick the highest-probability nonzero fragment length and use that for all sub
 ### Motif calling
 
 Process: `no_peak::getMotifs`
-All of the above is combined to perform no peak's motif calling.
+
+All of the above is combined to perform motif calling using NoPeak.
 Motif calls per fastq file are output to `reports/motifs/<Transcription Factor>/motifs`
 
 ## Post-processing
 
 ### multiQC
+
+Process: `qc::multiQC`
 
 Collate all QC reports except for the initial run of FastQC into a single report. Inputs from
 - FastQC
@@ -271,6 +290,10 @@ Collate all QC reports except for the initial run of FastQC into a single report
 - FastQ-Screen
 
 ### GAT
+
+Processes: 
+- `analysis::makeGatBedFiles`
+- `analysos::runGat`
 
 Genome Analysis Toolkit. This runs enrichment analysis, comparing called ASB sites to all heterozygous SNPs in a given cell line, and looking for enrichments in e.g. enhancers, promoters, promoter-flanking regions, etc.
 
