@@ -68,7 +68,7 @@ process getMotifs {
     tuple  val(antigen), val(bam_file), path(profile), path(fragment_size)
 
     output:
-    tuple val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
+    tuple val(antigen), val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
 
     script:
     """
@@ -93,4 +93,7 @@ workflow no_peak {
     profileMotifs(pileup, genome)
 
     profileMotifs.out.join(parseFragmentSize.out, by:[0,1] ) | getMotifs
+
+    emit:
+    motifs = getMotifs.out
 }
