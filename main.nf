@@ -130,6 +130,7 @@ include { mergeBeds; run_baal } from './modules/baal.nf'
 include { multi_qc } from './modules/qc.nf'
 include { process_results; create_report } from './modules/analysis.nf'
 include { no_peak } from './modules/motif.nf'
+include { filter_snps } from './modules/filter.nf'
 
 workflow {
     // Load CSV file
@@ -191,6 +192,9 @@ workflow {
     
     mergeBeds(group_ch.bed_files)
     run_baal(mergeBeds.out.join(group_ch.baal_files))
+
+    // filter snps on motifs
+    filter_snps(run_baal.out.asb, no_peak.out.motifs)
 
     process_results(run_baal.out.asb, group_ch.snp_files)
 
