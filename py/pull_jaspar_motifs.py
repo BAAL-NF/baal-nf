@@ -27,5 +27,4 @@ if __name__ == "__main__":
             with open(f"{id}.jaspar", 'w') as outfile:
                 outfile.writelines(pfm)
     else:
-        with open("no_JASPAR_motifs.jaspar", 'w') as outfile:
-                outfile.writelines(f"No motifs in JASPAR for {tf}")
+        print(f"No motifs in JASPAR for {tf}")
