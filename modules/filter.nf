@@ -8,7 +8,7 @@ process pullMotifs {
     path pullMotifsScript
 
     output:
-    tuple val(antigen), path("*.jaspar")
+    tuple val(antigen), path("*.jaspar"), optional: true
 
     script:
     """
@@ -27,5 +27,7 @@ workflow filter_snps {
         .map { antigen, bam_file, motifs, kmers -> antigen }
         .set { tf }
     jaspar = pullMotifs(tf, file("${projectDir}/py/pull_jaspar_motifs.py"))
+
+    jaspar.view()
 
 }
