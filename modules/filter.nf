@@ -24,7 +24,8 @@ workflow filter_snps {
     main:
     
     motifs
-        .map { antigen, bam_file, motifs, kmers -> antigen }
+        .groupTuple()
+        .map { antigen, bam_files, motifs, kmers -> antigen }
         .set { tf }
     jaspar = pullMotifs(tf, file("${projectDir}/py/pull_jaspar_motifs.py"))
 
