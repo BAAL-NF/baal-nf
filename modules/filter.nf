@@ -16,6 +16,20 @@ process pullMotifs {
     """
 }
 
+process getGenomepy {
+    label 'nopeak_utils'
+    storeDir params.genomepy_cache
+
+    output:
+    path "${params.assembly}"
+
+    script:
+    """
+    genomepy install --annotation ${params.assembly} --genomes_dir .
+    """
+}
+
+
 workflow filter_snps {
     take:
     asbs
@@ -29,6 +43,5 @@ workflow filter_snps {
         .set { tf }
     jaspar = pullMotifs(tf, file("${projectDir}/py/pull_jaspar_motifs.py"))
 
-    jaspar.view()
-
+    genomepy_idx = getGenomepy()
 }
