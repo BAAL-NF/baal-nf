@@ -29,11 +29,27 @@ process getGenomepy {
     """
 }
 
+process filterByMotifs {
+    label 'nopeak_utils'
+
+    input:
+    tuple val(antigen), path(motifs), path(snps)
+
+    output:
+    path "*.csv"
+
+    script:
+    """
+    echo "run filter"
+    """
+}
+
 
 workflow filter_snps {
     take:
     asbs
     motifs
+    groups
 
     main:
     
@@ -44,4 +60,11 @@ workflow filter_snps {
     jaspar = pullMotifs(tf, file("${projectDir}/py/pull_jaspar_motifs.py"))
 
     genomepy_idx = getGenomepy()
+
+    groups
+        .map { group_name, runs, antigens, snp_files, bam_files, index_files -> [group_name, *antigens.unique()] }
+        .join(asbs)
+        .groupTuple(by: 1)
+        .set { group_metadata }
+
 }
