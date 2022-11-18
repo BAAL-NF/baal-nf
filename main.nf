@@ -194,7 +194,7 @@ workflow {
     run_baal(mergeBeds.out.join(group_ch.baal_files))
 
     // filter snps on motifs
-    filter_snps(run_baal.out.asb, no_peak.out.motifs)
+    filter_snps(run_baal.out.asb, no_peak.out.motifs, group_ch.baal_files)
 
     process_results(run_baal.out.asb, group_ch.snp_files)
 
