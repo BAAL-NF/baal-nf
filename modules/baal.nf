@@ -84,7 +84,7 @@ process baalProcessBams {
 process baalGetASB {
     publishDir(params.baal_report_dir, mode: 'copy', pattern: "${group_name}.html")
     // Optionally export the object files
-    publishDir(params.baal_object_dir, mode: 'copy', pattern: "*.rds", enable: params.save_baal_objects)
+    publishDir(params.baal_object_dir, mode: 'copy', pattern: "final.rds", saveAs: {_ -> "${group_name}.rds"}, enable: params.save_baal_objects)
 
     label 'baal_chip'
     label 'parallel'
@@ -96,7 +96,7 @@ process baalGetASB {
     output:
     tuple val(group_name), path("${group_name}.csv"), path(bed_file), emit: asb
     tuple val(group_name), path("${group_name}.html"), emit: report
-    path("${group_name}.rds")
+    path("final.rds")
 
     script:
     """
@@ -107,7 +107,7 @@ process baalGetASB {
     # Read in hets from file
     res <- readRDS("process_bams.rds")
     res <- getASB(res, Iter=5000, conf_level=c(${params.confidence_levels.join(',')}), cores=${task.cpus}, clusterType = "PSOCK")
-    saveRDS(res, "${group_name}.rds")
+    saveRDS(res, "final.rds")
     report <- BaalChIP.report(res)
 
     # Write ASB results to CSV file
@@ -115,7 +115,7 @@ process baalGetASB {
 
     # generate final report
     knit("baal_report.Rmd")
-    render("baal_report.md", output_format="all", output_file="${group_name}")
+    rmarkdown::render("baal_report.md", output_format="all", output_file="${group_name}")
     """
 }
 
@@ -130,7 +130,7 @@ workflow run_baal {
             group_name, bed_file, runs, antigens, snp_files, bamfiles, index_files -> 
             [ group_name, bed_file, snp_files, bamfiles, index_files ] }
         .join(samples) | baalProcessBams
-    baalGetASB(baalProcessBams.out, file("${projectDir}/doc/baal_report.Rmd"))
+    baalGetASB(baalProcessBams.out, file("${projectDir}/autodoc/baal_report.Rmd"))
 
     emit:
     asb = baalGetASB.out.asb
