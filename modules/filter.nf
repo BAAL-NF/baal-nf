@@ -33,14 +33,17 @@ process filterByMotifs {
     label 'nopeak_utils'
 
     input:
-    tuple val(antigen), path(motifs), path(snps)
+    tuple val(antigen_asbs), path(snps)
+    tuple val(antigen_motifs), path(motifs)
+    path index
+    path filterScript
 
     output:
     path "*.csv"
 
     script:
     """
-    echo "run filter"
+    python ${filterScript} --assembly ${params.assembly} --genomepy_dir ${index} --tf_asb ${antigen_asbs} --tf_motifs ${antigen_motifs}
     """
 }
 
@@ -65,6 +68,8 @@ workflow filter_snps {
         .map { group_name, runs, antigens, snp_files, bam_files, index_files -> [group_name, *antigens.unique()] }
         .join(asbs)
         .groupTuple(by: 1)
-        .set { group_metadata }
+        .map { groups, antigen, asbs -> [antigen, asbs] }
+        .set { tf_asbs }
 
+    filt = filterByMotifs(tf_asbs, jaspar, genomepy_idx, file("${projectDir}/py/filter_snps_by_motifs.py"))
 }
