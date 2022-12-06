@@ -31,6 +31,7 @@ process getGenomepy {
 
 process filterByMotifs {
     label 'nopeak_utils'
+    publishDir("${params.report_dir}/motifs/", mode: 'copy')
 
     input:
     tuple val(antigen_asbs), path(snps)
