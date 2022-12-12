@@ -69,7 +69,6 @@ if __name__ == '__main__':
     print(jaspar_motifs)
 
     # Pull IC for each motif and write to dataframe
-    # Pull out information content for all motifs
     ic = pd.DataFrame(columns = ['motif','information_content'])
     for factor, motif_list in jaspar_motifs.items():
         ic = pd.DataFrame({'motif':[str(motif) for motif in motif_list], 
