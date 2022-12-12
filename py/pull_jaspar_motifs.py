@@ -14,17 +14,19 @@ if __name__ == "__main__":
 
     tf = get_input().tf
     data = client.action(document, ['matrix','list'], params = {
-        'name': tf,
+        'search': tf,
         'tax_id': '9606',
         'release': 'JASPAR2022'
     })
 
     if data['count'] != 0:
+        os.makedirs(tf)
         for motif in data['results']:
-            id = motif['matrix_id']
-            query = str(f"https://jaspar.genereg.net/api/v1/matrix/{id}/?format=jaspar")
-            pfm = client.get(query)
-            with open(f"{id}.jaspar", 'w') as outfile:
-                outfile.writelines(pfm)
+            if tf in motif['name']:
+                id = motif['matrix_id']
+                query = str(f"https://jaspar.genereg.net/api/v1/matrix/{id}/?format=jaspar")
+                pfm = client.get(query)
+                with open(f"{tf}/{id}.jaspar", 'w') as outfile:
+                    outfile.writelines(pfm)
     else:
         print(f"No motifs in JASPAR for {tf}")
