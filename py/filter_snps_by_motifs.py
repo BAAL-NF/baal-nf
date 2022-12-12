@@ -63,13 +63,12 @@ if __name__ == '__main__':
     print("Reading in JASPAR motifs...")
     jaspar_motifs = defaultdict(list)
 
-    for file in Path(f"./").glob("*.jaspar"):
+    for file in Path(f"{tf_motifs}/").glob("*.jaspar"):
         jaspar_motifs[str(tf_motifs)] += read_motifs(str(file), fmt="jaspar")
 
     print(jaspar_motifs)
 
     # Pull IC for each motif and write to dataframe
-    # Pull out information content for all motifs
     ic = pd.DataFrame(columns = ['motif','information_content'])
     for factor, motif_list in jaspar_motifs.items():
         ic = pd.DataFrame({'motif':[str(motif) for motif in motif_list], 
