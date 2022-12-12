@@ -2,13 +2,14 @@
 
 process pullMotifs {
     label 'nopeak_utils'
+    storeDir params.jaspar_cache
 
     input:
     val antigen
     path pullMotifsScript
 
     output:
-    tuple val(antigen), path("*.jaspar"), optional: true
+    tuple val(antigen), path("${antigen}/*.jaspar"), optional: true
 
     script:
     """
