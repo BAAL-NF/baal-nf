@@ -63,7 +63,7 @@ if __name__ == '__main__':
     print("Reading in JASPAR motifs...")
     jaspar_motifs = defaultdict(list)
 
-    for file in Path(f"./").glob("*.jaspar"):
+    for file in Path(f"{tf_motifs}/").glob("*.jaspar"):
         jaspar_motifs[str(tf_motifs)] += read_motifs(str(file), fmt="jaspar")
 
     print(jaspar_motifs)
