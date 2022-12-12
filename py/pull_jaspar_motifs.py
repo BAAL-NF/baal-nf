@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from coreapi import Client
+import os
 
 def get_input():
     parser = ArgumentParser()
