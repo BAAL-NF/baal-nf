@@ -16,18 +16,19 @@ process profileMotifs {
     label 'bigmem'
     label 'nopeak'
 
-    publishDir("${params.report_dir}/motifs/${antigen}/profiles/", mode: "copy")
+    publishDir("${params.report_dir}/motifs/${antigen}/profiles/${kmer}mer/", mode: "copy")
 
     input:
     tuple val(antigen), path(bam_file), path(bed_file)
     path genome
+    each kmer
 
     output:
-    tuple val(antigen), val("${bam_file}"),  path("profile_${bed_file}.csv")
+    tuple val(antigen), val("${bam_file}"), val(kmer), path("profile_${bed_file}.csv")
 
     script:
     """
-    noPeak PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${params.motif_kmer_length}
+    noPeak PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${kmer}
     """
 }
 
@@ -62,10 +63,10 @@ process parseFragmentSize {
 process getMotifs {
     label 'nopeak'
 
-    publishDir("${params.report_dir}/motifs/${antigen}/motifs/", mode: "copy")
+    publishDir("${params.report_dir}/motifs/${antigen}/motifs/${kmer}mer/", mode: "copy")
 
     input:
-    tuple  val(antigen), val(bam_file), path(profile), path(fragment_size)
+    tuple  val(antigen), val(bam_file), val(kmer), path(profile), path(fragment_size)
 
     output:
     tuple val(antigen), val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
@@ -84,13 +85,16 @@ workflow no_peak {
 
     main:
 
+    // Create value channel for sensitivity analysis
+    kmer_lengths = Channel.of(6,8,10,12,14)
+
     parse_script = file("${projectDir}/py/get_fragment_sizes.py")
     getFragmentSize(input) | set { spp_output }
     parseFragmentSize(spp_output, parse_script)
     
     genome = file(params.nopeak_index, type: 'dir', checkIfExists: true)
     bamToBed(input) | set { pileup }
-    profileMotifs(pileup, genome)
+    profileMotifs(pileup, genome, kmer_lengths)
 
     profileMotifs.out.join(parseFragmentSize.out, by:[0,1] ) | getMotifs
 
