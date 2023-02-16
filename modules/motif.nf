@@ -86,7 +86,7 @@ workflow no_peak {
     main:
 
     // Create value channel for sensitivity analysis
-    kmer_lengths = Channel.of(6,8,10,12,14)
+    kmer_lengths = Channel.of(6,8,10,12)
 
     parse_script = file("${projectDir}/py/get_fragment_sizes.py")
     getFragmentSize(input) | set { spp_output }
