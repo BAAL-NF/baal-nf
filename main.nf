@@ -196,7 +196,7 @@ workflow {
     process_results(run_baal.out.asb, group_ch.snp_files)
 
     // filter snps on motifs
-    filter_snps(process_results.out.overlap_peaks, no_peak.out.motifs, group_ch.baal_files)
+    filter_snps(process_results.out.overlap_peaks, group_ch.baal_files)
 
     create_report(run_baal.out.report, multi_qc.out, process_results.out.overlap_peaks, process_results.out.gat)
 }
