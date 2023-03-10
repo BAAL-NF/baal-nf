@@ -5,11 +5,11 @@ process pullMotifs {
     storeDir params.jaspar_cache
 
     input:
-    val antigen
+    tuple val(antigen), path(snps)
     path pullMotifsScript
 
     output:
-    tuple val(antigen), path("${antigen}/*.jaspar"), optional: true
+    tuple val(antigen), path(snps), path("${antigen}/*.jaspar"), optional: true
 
     script:
     """
@@ -32,11 +32,10 @@ process getGenomepy {
 
 process filterByMotifs {
     label 'nopeak_utils'
-    publishDir("${params.report_dir}/asb_filt/", mode: 'copy')
+    publishDir("${params.report_dir}/asb_filt/${antigen}/", mode: 'copy')
 
     input:
-    tuple val(antigen_asbs), path(snps)
-    tuple val(antigen_motifs), path(motifs)
+    tuple val(antigen), path(snps), path(motifs)
     path index
     path filterScript
 
@@ -45,7 +44,7 @@ process filterByMotifs {
 
     script:
     """
-    python ${filterScript} --assembly ${params.assembly} --genomepy_dir ${index} --tf_asb ${antigen_asbs} --tf_motifs ${antigen_motifs}
+    python ${filterScript} --assembly ${params.assembly} --genomepy_dir ${index} --tf_asb ${antigen} --tf_motifs ${antigen}
     """
 }
 
@@ -53,25 +52,18 @@ process filterByMotifs {
 workflow filter_snps {
     take:
     asbs
-    motifs
     groups
 
     main:
-    
-    motifs
-        .groupTuple()
-        .map { antigen, bam_files, motifs, kmers -> antigen }
-        .set { tf }
-    jaspar = pullMotifs(tf, file("${projectDir}/py/pull_jaspar_motifs.py"))
-
-    genomepy_idx = getGenomepy()
 
     groups
         .map { group_name, runs, antigens, snp_files, bam_files, index_files -> [group_name, *antigens.unique()] }
         .join(asbs)
         .groupTuple(by: 1)
         .map { groups, antigen, asbs -> [antigen, asbs] }
-        .set { tf_asbs }
+        .set { tf_asbs } 
+    asbs_motifs = pullMotifs(tf_asbs, file("${projectDir}/py/pull_jaspar_motifs.py"))
+    genomepy_idx = getGenomepy()
 
-    filt = filterByMotifs(tf_asbs, jaspar, genomepy_idx, file("${projectDir}/py/filter_snps_by_motifs.py"))
+    filt = filterByMotifs(asbs_motifs, genomepy_idx, file("${projectDir}/py/filter_snps_by_motifs.py"))
 }
