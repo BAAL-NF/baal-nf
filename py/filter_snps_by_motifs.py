@@ -50,10 +50,10 @@ def filter_bqtls(df):
 
 if __name__ == '__main__':
     assembly = get_input().assembly
-    genomepy_idx = get_input().genomepy_dir
+    genomepy_dir = get_input().genomepy_dir
     tf_motifs = get_input().tf_motifs
     tf_asb = get_input().tf_asb
-    fasta = f"{genomepy_idx}/{assembly}.fa"
+    fasta = f"{genomepy_dir}/{assembly}.fa"
 
     ReferenceGenome.offset = 25
     genome = ReferenceGenome(fasta) # works to here
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     print("Reading in JASPAR motifs...")
     jaspar_motifs = defaultdict(list)
 
-    for file in Path(f"{tf_motifs}/").glob("*.jaspar"):
+    for file in Path(f"./").glob("*.jaspar"):
         jaspar_motifs[str(tf_motifs)] += read_motifs(str(file), fmt="jaspar")
 
     print(jaspar_motifs)
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     for factor, vals in correlations.items():
         roes = [t[0] for t in vals.values()]
         pvals = [p[1] for p in vals.values()]
-        tmp = pd.DataFrame({'factor': factor, 'motif' : vals.keys(), 'spearmans_roe' : roes, 'pval' : pvals})
+        tmp = pd.DataFrame({'factor': factor, 'motif' : vals.keys(), 'spearmans_rho' : roes, 'pval' : pvals})
         corrs = corrs.append(tmp)
 
     print("Computing the number of SNPs that fall within each motif...")
