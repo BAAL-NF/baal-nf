@@ -14,6 +14,28 @@ process fastQC {
     # FASTQC run ${run}
     fastqc -l ${fastqc_conf} ${run}*.fastq.gz
     """
+
+    stub:
+    """
+    FILES=(${run}*.fastq.gz)
+    case \${#FILES[@]} in
+        1)
+        touch ${run}_fastqc.zip
+        touch ${run}_fastqc.html
+        ;;
+
+        2)
+        touch ${run}1_fastqc.zip
+        touch ${run}1_fastqc.html
+        touch ${run}2_fastqc.zip
+        touch ${run}2_fastqc.html
+        ;;
+        
+        *)
+        echo "Error getting files for sample ${run}, exiting"
+        exit 1
+    esac
+    """
 }
 
 process getFastqcResult {
@@ -32,6 +54,12 @@ process getFastqcResult {
                   """
     }
     script
+    
+    stub:
+    """
+    touch summary.txt 
+    cat summary.txt 
+    """
 }
 
 workflow filter_fastq {
@@ -66,6 +94,12 @@ process fetchFastqScreenFiles {
     # Strip out absolute path to accomodate staging into working directory
     sed -i "s#${PWD}/##g" FastQ_Screen_Genomes/fastq_screen.conf
     '''
+
+    stub:
+    """
+    mkdir FastQ_Screen_Genomes
+    touch FastQ_Screen_Genomes/fastq_screen.conf
+    """
 }
 
 process fastqScreen {
@@ -105,6 +139,12 @@ process fastqScreen {
         exit 1
     esac
     """
+
+    stub:
+    """
+    touch ${run}_screen.html
+    touch ${run}_screen.txt
+    """
 }
 
 process getFastqScreenResult {
@@ -130,6 +170,11 @@ process getFastqScreenResult {
             break
 
     print("pass" if result else "fail")
+    """
+
+    stub:
+    """
+    echo "pass"
     """
 }
 
@@ -163,6 +208,13 @@ process multiQC {
     script:
     """
     multiqc ${results}
+    """
+
+    stub:
+    """
+    mkdir multiqc_data
+    touch multiqc_data/multiqc.log
+    touch multiqc_report.html
     """
 }
 
