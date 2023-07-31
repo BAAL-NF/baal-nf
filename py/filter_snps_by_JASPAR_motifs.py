@@ -133,6 +133,11 @@ if __name__ == '__main__':
     print("Reading in ASB data...")
     asb_data = get_asb(".",tf_asb)
 
+    # If there are no ASBs, just exit without creating a new file
+    if (asb_data.shape[0]==0):
+        print(f"No ASB sites found for {tf_asb}. Exiting...")
+        exit(0)
+
     # Create score set object through gimmemotifs for all facors and motifs within ASB sites for genome hg19
     # This is configured for having 1 factor associated with ASB sites provided and 1 factor for motifs
     print("Creating score set object through gimmemotifs for all factors and motifs in ASB sites...")
@@ -141,6 +146,11 @@ if __name__ == '__main__':
     # Get best motif score with FDR < 0.05
     print("Pulling best motif score with FDR < 0.05 for all motifs in this set...")
     scores = { factor : set.get_best_scores(fpr=0.05) for factor, set in score_sets.items() }
+
+    if (scores[tf_motifs].shape[0]==0):
+        # code to exit
+        print(f"No ASB sites map to the motif with FPR < 0.05 for {tf_motifs}. Exiting...")
+        exit(0)
 
     correlations = compute_correlations(scores)
 
