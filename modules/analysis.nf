@@ -13,6 +13,11 @@ process overlapPeaks {
     """
     python ${script} ${asb_file} ${bed_file} ${group_name}.withPeaks.csv
     """
+
+    stub:
+    """
+    touch ${group_name}.withPeaks.csv
+    """
 }
 
 process makeGatBedFiles {
@@ -31,6 +36,12 @@ process makeGatBedFiles {
     """
     python ${bedfile_script} ${asb_file} ${snp_file}
     """
+
+    stub:
+    """
+    touch foreground.bed
+    touch background.bed
+    """
 }
 
 process runGat {
@@ -47,6 +58,11 @@ process runGat {
     """
     gat-run.py --segments ${foreground} --annotations=${annotations} --workspace=${background}\
                --ignore-segment-tracks --num-samples=${params.gat_num_samples} --log=gat.log > ${group}.tsv
+    """
+
+    stub:
+    """
+    touch ${group}.tsv
     """
 }
 
