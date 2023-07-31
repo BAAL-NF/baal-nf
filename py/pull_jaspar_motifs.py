@@ -17,6 +17,7 @@ if __name__ == "__main__":
     document = client.get('https://jaspar.genereg.net/api/v1/docs/')
 
     tf = get_input().tf
+    include_cofactors = get_input().cofactors
     data = client.action(document, ['matrix','list'], params = {
         'search': tf,
         'tax_id': '9606',
