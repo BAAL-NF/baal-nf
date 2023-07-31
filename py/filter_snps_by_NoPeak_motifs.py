@@ -258,4 +258,3 @@ if __name__ == '__main__':
     print("Written file:", outname)
     pd.DataFrame(motif_inf).to_csv(f"NoPeak_Motif_metadata_{tf_motifs}.csv", index = True)
     print(f"Written file: NoPeak_Motif_metadata_{tf_motifs}.csv")
-    
