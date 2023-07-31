@@ -31,6 +31,28 @@ process trimGalore {
         exit 1
     esac
     """
+
+    stub:
+    """
+    FILES=(${run}*.fastq.gz)
+    case \${#FILES[@]} in
+        1)
+        touch ${run}.fastq.gz_trimming_report.txt
+        touch ${run}_tg_trimmed.fq.gz
+        ;;
+
+        2)
+        touch ${run}1.fastq.gz_trimming_report.txt
+        touch ${run}2.fastq.gz_trimming_report.txt
+        touch ${run}_tg_val_1.fq.gz
+        touch ${run}_tg_val_2.fq.gz
+        ;;
+
+        *)
+        echo "Error getting files for sample ${run}, exiting"
+        exit 1
+    esac
+    """
 }
 
 process createBam {
@@ -76,15 +98,26 @@ process createBam {
               mkdir metrics
               """.stripIndent()
 
+    // assign 80% of the task memory to picard
+    avail_mem = (task.memory.mega*0.8).intValue()
+
     if (params.dedup_umi) {
         // UMI tools needs the bam file to be indexed. We still need to index the deduplicated files afterwards.
         script += "samtools index ${run}.bam\n"
         script += "umi_tools dedup ${params.umi_tools_options} ${paired ? '--paired' : ''} --stdin=${run}.bam --output-stats=\"metrics/${run}\"  --log=${run}.dedup.log > ${run}_dedup.bam\n"
     } else {
-        script += "picard MarkDuplicates I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"metrics/${run}.metrics\"\n"
+        script += "picard MarkDuplicates -Xmx${avail_mem}M I=\"${run}.bam\" O=\"${run}_dedup.bam\" M=\"metrics/${run}.metrics\"\n"
     }
 
     script
+
+    stub:
+    """
+    touch ${run}_dedup.bam
+    touch ${run}.log 
+    mkdir metrics
+    touch metrics/${run}.metrics
+    """
 }
 
 process index {
@@ -94,8 +127,14 @@ process index {
     output:
     tuple val(run), path(bamfile), path("${bamfile}.bai")
 
+    script:
     """
     samtools index ${bamfile}
+    """
+
+    stub:
+    """
+    touch ${run}_dedup.bam.bai
     """
 }
 
