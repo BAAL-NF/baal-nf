@@ -122,6 +122,9 @@ process reportFastQC {
 
     script:
     'exit 0'
+
+    stub:
+    'exit 0'
 }
 
 
