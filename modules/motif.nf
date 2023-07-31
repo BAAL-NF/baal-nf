@@ -9,6 +9,11 @@ process bamToBed {
     """
     bamToBed -i ${bam_file} | sort -k1,1 -k2n  > ${bam_file.baseName}.bed
     """
+
+    stub:
+    """
+    touch ${bam_file.baseName}.bed
+    """
 }
 
 process profileMotifs {
@@ -30,6 +35,11 @@ process profileMotifs {
     """
     noPeak PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${kmer}
     """
+
+    stub:
+    """
+    touch profile_${bed_file}.csv
+    """
 }
 
 process getFragmentSize {
@@ -50,6 +60,12 @@ process getFragmentSize {
     # Export quality score as variable in the output channel
     quality=\$( awk '{print \$11}' ${bam_file.baseName}.filt.txt )
     """
+
+    stub:
+    """
+    touch ${bam_file.baseName}.txt
+    quality="2"
+    """
 }
 
 process parseFragmentSize {
@@ -63,6 +79,11 @@ process parseFragmentSize {
     script:
     """
     python ${parse_script} ${spp_output} ${bam_file.baseName}.fragment_size.txt
+    """
+
+    stub:
+    """
+    touch ${bam_file.baseName}.fragment_size.txt
     """
 }
 
@@ -78,7 +99,7 @@ process getMotifs {
     tuple val(antigen), val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
 
     when:
-    quality != "-2" && quality != "-1"
+    quality != "-2" && quality != "-1" && quality != "0"
 
     script:
     """
@@ -86,6 +107,11 @@ process getMotifs {
     noPeak LOGO --strict --signal ${profile} --fraglen \$FRAGMENT_SIZE --export-kmers ${bam_file}.kmers.txt > ${bam_file}.motifs.txt
     """
 
+    stub:
+    """
+    touch ${bam_file}.motifs.txt
+    touch ${bam_file}.kmers.txt
+    """
 }
 
 workflow no_peak {
