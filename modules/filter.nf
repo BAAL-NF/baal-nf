@@ -87,6 +87,10 @@ process filterByNoPeakMotifs {
     output:
     path "NoPeak_Motif_metadata_${antigen}.csv", emit: motif_dat, optional: true
     tuple val(antigen), path("${antigen}_ASBs_NoPeak_Motifs_AR_score_diff.csv"), emit: filt_asb, optional: true
+    path "histogram_kmer_counts.png", optional: true
+    tuple path("${antigen}_accessory_motif_JASPAR_matches.csv"), path("${antigen}_accessory_NoPeak_motif_logo*png"), optional: true
+    path "${antigen}_denovo_NoPeak_motif_logo*png", optional: true
+    path "${antigen}_redundant_NoPeak_motif_logo*png", optional: true
 
     script:
     """
@@ -95,7 +99,7 @@ process filterByNoPeakMotifs {
     export XDG_CACHE_HOME=\$NEW_CACHE
     echo "Using \$XDG_CACHE_HOME for cache"
 
-    python ${filterScript} --assembly ${params.assembly} --k ${params.k} --genomepy_dir ${index} --tf_asb ${antigen} --tf_motifs ${antigen} 
+    python ${filterScript} --assembly ${params.assembly} --genomepy_dir ${index} --tf_asb ${antigen} --tf_motifs ${antigen} --save_logo_plots True
     """
 
     stub:
