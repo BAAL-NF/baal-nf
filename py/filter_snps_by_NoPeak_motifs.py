@@ -27,7 +27,7 @@ def get_input():
         "--n_cpus", type = int,  nargs='?', default=1, help="Number of CPUs used to cluster motifs"
     )
     parser.add_argument(
-        "--out_dir", type = str,  nargs='?', default=".", help="Number of CPUs used to cluster motifs"
+        "--out_dir", type = str,  nargs='?', default=".", help="Output directory"
     )
     parser.add_argument(
         "--sub_dir", type = bool,  nargs='?', default=False, help="Organize output into subdirectories"
