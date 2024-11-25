@@ -65,19 +65,25 @@ def get_jaspar(input_path, tf, motif_mode):
     data = data[data.tf == tf]
     return data
 
-def subset_bqtls(jaspar, nopeak, tf, concordant = True):
+def subset_bqtls(jaspar, nopeak, tf, concordant = True, isasb = True):
     sub_jaspar = jaspar[
         (jaspar.High_quality_motif) & 
-        (jaspar.Concordant == concordant) &
+        (jaspar.isASB == isasb) &
         (jaspar.tf == tf)
         ].copy()
     sub_nopeak = nopeak[
         (nopeak.High_quality_motif) & 
-        (nopeak.Concordant == concordant) & 
+        (nopeak.isASB == isasb) &
+        (nopeak.tf == tf) &
         (nopeak.NoPeak_mapping != 'Matches expected JASPAR motif')
         ].copy()
 
+    if isasb:
+        sub_jaspar = sub_jaspar[sub_jaspar.Concordant == concordant]
+        sub_nopeak = sub_nopeak[sub_nopeak.Concordant == concordant]
+
     return sub_jaspar, sub_nopeak 
+
 
 if __name__ == '__main__':
     tf = get_input().tf
@@ -89,10 +95,13 @@ if __name__ == '__main__':
     jaspar_data = get_jaspar(".", tf, mode)
 
     # Filter for concordant & discordant bQTLs
-    concordant_jaspar, concordant_nopeak = subset_bqtls(jaspar_data, nopeak_data, tf, concordant = True)
-    discordant_jaspar, discordant_nopeak = subset_bqtls(jaspar_data, nopeak_data, tf, concordant = False)
+    concordant_jaspar, concordant_nopeak = subset_bqtls(jaspar_data, nopeak_data, tf, concordant = True, isasb = True)
+    discordant_jaspar, discordant_nopeak = subset_bqtls(jaspar_data, nopeak_data, tf, concordant = False, isasb = True)
 
-    is_concordant = [ [0]*25 for i in range(peak_asb_data.shape[0])]
+    # Identify SNPs that map to high-quality motifs but are not ASB sites
+    snps_jaspar, snps_nopeak = subset_bqtls(jaspar_data, nopeak_data, tf, isasb = False)
+
+    is_concordant = [ [0]*25 for i in range(peak_asb_data.shape[0]) ]
     for index, snp in enumerate(peak_asb_data.ID.values):
         cell_line = peak_asb_data.iloc[index]['cell_line']
         # ASB is concordant in JASPAR motifs
@@ -166,6 +175,33 @@ if __name__ == '__main__':
                 print(index)
                 raise ValueError("More than one transcription factor present in this table")
             is_concordant[index] = out
+
+        # SNP maps to high quality motif but is not ASB site
+        elif snp in np.append(snps_jaspar[snps_jaspar.cell_line == cell_line].ID.values, 
+                                snps_nopeak[snps_nopeak.cell_line == cell_line].ID.values): 
+            rowjasp = snps_jaspar.index[
+                (snps_jaspar['ID'] == snp) &
+                (snps_jaspar['cell_line'] == cell_line)
+            ]
+            rownopeak = snps_nopeak.index[
+                (snps_nopeak['ID'] == snp) &
+                (snps_nopeak['cell_line'] == cell_line)
+            ]
+            subjasp = snps_jaspar.loc[rowjasp].copy()
+            subnopeak = snps_nopeak.loc[rownopeak].copy()
+            # Define motif group
+            if (subjasp.shape[0] != 0) & (subnopeak.shape[0] != 0):
+                group = "JASPAR and NoPeak"
+            elif (subjasp.shape[0] != 0):
+                group = "JASPAR"
+            else:
+                group = "NoPeak"
+            sub = pd.concat([subjasp,subnopeak])
+            motifs = ";".join(np.unique(sub.motif.values))
+            out = sub[peak_asb_data.columns.tolist() + ['High_quality_motif','Concordant']].drop_duplicates()
+            out['Motifs'] = motifs
+            out['Motif_group'] = group
+            is_concordant[index] = out 
 
         # SNP/ASB does not map to high quality motif
         else:
