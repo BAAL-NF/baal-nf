@@ -1,12 +1,11 @@
 from collections import defaultdict
 from pathlib import Path
 from argparse import ArgumentParser
-
 import pandas as pd
 import numpy as np
-import motifutils as mu
 
-from scores import ScoreSet
+# Custom libraries
+import motifutils as mu
 from tfomics import ReferenceGenome
 
 def get_input():
@@ -27,7 +26,7 @@ def get_input():
         "--n_cpus", type = int,  nargs='?', default=1, help="Number of CPUs used to cluster motifs"
     )
     parser.add_argument(
-        "--out_dir", type = str,  nargs='?', default=".", help="Output directory"
+        "--out_dir", type = str,  nargs='?', default=".", help="Number of CPUs used to cluster motifs"
     )
     parser.add_argument(
         "--sub_dir", type = bool,  nargs='?', default=False, help="Organize output into subdirectories"
@@ -62,107 +61,77 @@ if __name__ == '__main__':
                                                         out_dir = out_dir, sub_dir = sub_dir)
 
     # Cluster nopeak_motifs if there are more than one
-    if (len(nopeak_motifs[tf_motifs]) > 1):
-        clustered_motifs = mu.cluster_high_kmer_motifs(motifs = nopeak_motifs, tf = tf_motifs, ncpus = n_cpus,
-            out_dir = out_dir, sub_dir = sub_dir)
-    elif (len(nopeak_motifs[tf_motifs]) == 1):
-        clustered_motifs = nopeak_motifs
-    elif (len(nopeak_motifs[tf_motifs]) == 0):
-        print(f"No NoPeak motifs found with KMER count > 10 for {tf_motifs}. Exiting...")
-        exit(0)
-    
+    clustered_motifs = mu.cluster_high_kmer_motifs(motifs = nopeak_motifs, tf = tf_motifs, ncpus = n_cpus,
+        out_dir = out_dir, sub_dir = sub_dir)
+
     # Import asb data and filter for ASBs within peaks
     print("Reading in ASB data...")
-    asb_data = mu.get_asb(".",tf_asb)
+    peak_data = mu.get_snps(".",tf_asb)
 
-    # If there are no ASBs, just exit without creating a new file
-    if (asb_data.shape[0]==0):
-        print(f"No ASB sites found for {tf_asb}. Exiting...")
-        exit(0)
-    
-    # Create score set object through gimmemotifs for all facors and motifs within ASB sites for genome hg19
-    print("Creating score set object through gimmemotifs for all factors and motifs in ASB sites...")
-    score_sets = { factor : ScoreSet(asb_data, motif_list, genome) for factor, motif_list in clustered_motifs.items()}
-
-    # Get best motif score with FDR < 0.05
-    print("Pulling best motif score with FDR < 0.05 for all motifs in this set...")
-    all_scores = { factor : set.get_best_scores(fpr=0.05) for factor, set in score_sets.items() }
-
-    if all_scores[tf_motifs].empty:
-        print(f"No sequences scored against motifs for {tf_motifs} found with FDR < 0.05")
-        exit(0)
-    
-    # Remove score_diff = 0
-    scores = { factor : set[set.score_diff != 0] for factor, set in all_scores.items()}
+    print("Scoring each SNP against each motif-of-interest...")
+    scores_peaks = mu.score_snps(peak_data, clustered_motifs, tf_motifs, genome)
 
     print("Computing spearman's rho correlation coefficient for each motif...")
-    correlations = mu.compute_correlations(scores)
+    correlations = mu.compute_correlations(scores_peaks)
 
-    # Filter for motifs with PCC pval <= 0.05
-    print("Filter for motifs with a significant correlation coefficient rho...")
-    out = scores[tf_motifs].copy()
-    filtered_motifs, sig = mu.find_high_quality_motifs(out, correlations, clustered_motifs, tf_motifs)
+    print("Filter for motifs with a significant and positive correlation coefficient rho...")
+    high_quality_motifs, sig_mappings = mu.find_high_quality_motifs(scores_peaks, correlations, clustered_motifs, tf_motifs)
+
+    print("Computing information content across clustered motifs...")
+    ic = mu.pull_motif_metadata(motifs = clustered_motifs)
+
+    print("Reading in SNP data...")
+    snp_data = mu.get_snps(".", tf_asb, filter_peak=False)
+
+    print("Scoring all SNPs against high-quality motifs")
+    scores = mu.score_snps(snp_data, high_quality_motifs, tf_motifs, genome)
 
     print("Computing the number of SNPs that fall within each motif...")
-    snp_counts = mu.compute_snp_counts(out, asb_data, tf_motifs, tf_asb)
-    snp_counts = snp_counts[snp_counts.motif.isin(correlations.motif)]
+    snp_counts = mu.compute_snp_counts(scores, snp_data, tf_motifs, tf_asb)
 
-    # Write csv with score_diff and AR information
-    out["tf_motif"] = tf_motifs
-    out["High_quality_motif"] = out["motif"].isin(sig["motif"].unique())
+    # Get dataframe of all SNPs mapping to all motifs & add column information
+    out_snps = mu.compile_scores_data(scores, tf_motifs)
 
-    # If no significant motifs, do not match to JASPAR database
-    if sig.shape[0]==0:
-        print("No High-quality motifs")
-        out["NoPeak_mapping"] = np.nan
-    
-    # Otherwise - match against JASPAR
-    else:
-        # Compare against JASPAR motifs
-        print("Classifying NoPeak motifs by mapping to known JASPAR motifs...")
-        redundant_motifs, accessory_motifs, denovo_motifs = mu.find_motif_matches(motifs = filtered_motifs, 
-                                                                                            tf = tf_motifs,
-                                                                                            out_dir = out_dir)
+    # Compare against JASPAR motifs
+    print("Classifying NoPeak motifs by mapping to known JASPAR motifs...")
+    redundant_motifs, accessory_motifs, denovo_motifs = mu.find_motif_matches(motifs = high_quality_motifs, 
+                                                                                        tf = tf_motifs,
+                                                                                        out_dir = out_dir)
 
-        mu.save_logo_plot(motifs = redundant_motifs, motif_list = filtered_motifs, tf = tf_motifs, 
-                        motif_group = "redundant", out_dir = out_dir, sub_dir = sub_dir, save = save_logo_plots)
-        mu.save_logo_plot(motifs = accessory_motifs, motif_list = filtered_motifs, tf = tf_motifs, 
-                        motif_group = "accessory", out_dir = out_dir, sub_dir = sub_dir, save = save_logo_plots)
-        mu.save_logo_plot(motifs = denovo_motifs, motif_list = filtered_motifs, tf = tf_motifs, 
-                        motif_group = "denovo", out_dir = out_dir, sub_dir = sub_dir, save = save_logo_plots)
+    mu.save_logo_plot(motifs = redundant_motifs, motif_list = high_quality_motifs, tf = tf_motifs, 
+                    motif_group = "redundant", out_dir = out_dir, sub_dir = sub_dir, save = save_logo_plots)
+    mu.save_logo_plot(motifs = accessory_motifs, motif_list = high_quality_motifs, tf = tf_motifs, 
+                    motif_group = "accessory", out_dir = out_dir, sub_dir = sub_dir, save = save_logo_plots)
+    mu.save_logo_plot(motifs = denovo_motifs, motif_list = high_quality_motifs, tf = tf_motifs, 
+                    motif_group = "denovo", out_dir = out_dir, sub_dir = sub_dir, save = save_logo_plots)
 
-        # Add NoPeak motif information into dataframe
-        out = mu.add_nopeak_information(out, correlations, redundant_motifs, accessory_motifs, denovo_motifs)
-    
-    # Filter bQTLs and add information into output file
-    total_snps = len(out.ID.unique())
+    # Add NoPeak motif information into SNP dataframe
+    out_snps = mu.add_nopeak_information(out_snps, correlations, redundant_motifs, accessory_motifs, denovo_motifs)
 
-    # Identify concordant/discordant bQTLs on high quality motifs
-    out_high_quality = mu.filter_for_high_quality_motifs(out) 
-    concordant = mu.filter_bqtls(out_high_quality, concordant = True)
-    discordant = mu.filter_bqtls(out_high_quality, concordant = False)
+    # Add concordant/discordant information
+    concordant = mu.filter_asbs(out_snps, concordant = True)
+    discordant = mu.filter_asbs(out_snps, concordant = False)
     concordant_bqtls = len(concordant.ID.unique())
+    total_snps = len(out_snps.ID.unique())
     print(
         f"ASBs factor: {tf_asb}, Motifs factor: {tf_motifs}, Significant SNPs: {total_snps}, High-quality bQTLs: {concordant_bqtls}"
     ) 
 
     # Add Concordance information into output table
-    concordant["Concordant"] = True
-    discordant["Concordant"] = False
-    bqtls = pd.concat([concordant, discordant])
-    final = pd.merge(out, bqtls, how = "left")
+    asbs = pd.concat([concordant, discordant])
+    final = pd.merge(out_snps, asbs, how = "left")
     final = final.convert_dtypes()
 
-    # Regenerate motif metadata and then concatenate all motif dataframe to export as one file
-    ic = mu.pull_motif_metadata(motifs = clustered_motifs) 
-    motif_inf = snp_counts.set_index('motif').join(correlations.set_index('motif')).join(ic.set_index('motif'))
-    motif_inf = motif_inf.drop(['factor'],axis=1)
-    motif_inf["high_quality"] = (motif_inf.pval <= 0.05) & (motif_inf.spearmans_rho > 0)
+    # Add NoPeak motif information into Motif metadata dataframe
+    motif_inf = mu.compile_motif_data(correlations,ic,snp_counts,tf_motifs)
+    motif_inf["motif"] = motif_inf.index
+    motif_inf = mu.add_nopeak_information(motif_inf, correlations, redundant_motifs, accessory_motifs, denovo_motifs)
+    motif_inf = motif_inf.drop(['motif'],axis=1)
 
-    # Export all CSV files
+    # Write all files to CSV
     print("Saving files to csv...")
+    motif_inf.to_csv(f"{out_dir}/NoPeak_Motif_metadata_{tf_motifs}.csv", index = True)
+    print(f"Written file: NoPeak_Motif_metadata_{tf_motifs}.csv")
     outname = "_".join([tf_motifs, "ASBs", "NoPeak", "Motifs", "AR_score_diff.csv"])
     final.to_csv(f"{out_dir}/{outname}", index = False)
     print("Written file:", outname)
-    pd.DataFrame(motif_inf).to_csv(f"{out_dir}/NoPeak_Motif_metadata_{tf_motifs}.csv", index = True)
-    print(f"Written file: NoPeak_Motif_metadata_{tf_motifs}.csv")
