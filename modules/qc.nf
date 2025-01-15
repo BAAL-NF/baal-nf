@@ -104,6 +104,7 @@ process fetchFastqScreenFiles {
 
 process fastqScreen {
     label 'parallel'
+    label 'bigmem'
 
     input:
     tuple val(run), path("${run}*.fastq.gz")
