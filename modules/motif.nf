@@ -43,6 +43,7 @@ process profileMotifs {
 }
 
 process getFragmentSize {
+    label 'moremem'
     publishDir("${params.report_dir}/motifs/${antigen}/spp/", mode: "copy")
     input:
     tuple val(antigen), path(bam_file)
