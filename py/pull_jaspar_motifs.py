@@ -8,7 +8,7 @@ def get_input():
         "tf", type = str, help="TF for which you want to query motifs from JASPAR"
     )
     parser.add_argument(
-        "--cofactors", type = bool, nargs='?', const=False, help="True/False for whether you want to also pull motifs for associated proteins"
+        "--cofactors", type = bool, nargs = '?', default=False, help="True/False for whether you want to also pull motifs for associated proteins"
     )
     return parser.parse_args()
 
