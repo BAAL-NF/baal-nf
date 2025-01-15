@@ -5,7 +5,7 @@ process pullMotifs {
     storeDir params.jaspar_cache
 
     input:
-    val antigen
+    tuple val(antigen), path(asbs)
     path pullMotifsScript
 
     output:
@@ -46,7 +46,7 @@ process getGenomepy {
 process filterByJASPARMotifs {
     label 'nopeak_utils'
     label 'moremem'
-    publishDir("${params.report_dir}/asb_filt/JASPAR/${antigen}/", mode: 'copy')
+    publishDir("${params.report_dir}/asb_characterized/JASPAR/${antigen}/", mode: 'copy')
 
     input:
     tuple val(antigen), path(snps), path(motifs)
@@ -54,8 +54,8 @@ process filterByJASPARMotifs {
     path filterScript
 
     output:
-    path "JASPAR_Motif_metadata_${antigen}.csv", emit: motif_dat, optional: true
-    tuple val(antigen), path("${antigen}_ASBs_JASPAR_Motifs_AR_score_diff.csv"), emit: filt_asb, optional: true
+    path "JASPAR_Motif_metadata_${antigen}.csv", emit: motif_dat
+    tuple val(antigen), path("${antigen}_ASBs_JASPAR_Motifs_AR_score_diff.csv"), emit: filt_asb
 
     script:
     """
@@ -77,7 +77,7 @@ process filterByJASPARMotifs {
 process filterByNoPeakMotifs {
     label 'nopeak_utils'
     label 'moremem'
-    publishDir("${params.report_dir}/asb_filt/NoPeak/${antigen}/", mode: 'copy')
+    publishDir("${params.report_dir}/asb_characterized/NoPeak/${antigen}/", mode: 'copy')
 
     input:
     tuple val(antigen), path(motifs), path(asbs)
@@ -85,8 +85,8 @@ process filterByNoPeakMotifs {
     path filterScript
 
     output:
-    path "NoPeak_Motif_metadata_${antigen}.csv", emit: motif_dat, optional: true
-    tuple val(antigen), path("${antigen}_ASBs_NoPeak_Motifs_AR_score_diff.csv"), emit: filt_asb, optional: true
+    path "NoPeak_Motif_metadata_${antigen}.csv", emit: motif_dat
+    tuple val(antigen), path("${antigen}_ASBs_NoPeak_Motifs_AR_score_diff.csv"), emit: filt_asb
     path "histogram_kmer_counts.png", optional: true
     tuple path("${antigen}_accessory_motif_JASPAR_matches.csv"), path("${antigen}_accessory_NoPeak_motif_logo*png"), optional: true
     path "${antigen}_denovo_NoPeak_motif_logo*png", optional: true
@@ -111,7 +111,7 @@ process filterByNoPeakMotifs {
 
 process compileMotifInformation {
     label 'nopeak_utils'
-    publishDir("${params.report_dir}/asb_filt/compiled/", mode: 'copy')
+    publishDir("${params.report_dir}/asb_characterized/compiled/", mode: 'copy')
     
     input:
     tuple val(antigen), path(asbs), val(jaspar), val(nopeak)
@@ -161,14 +161,13 @@ workflow filter_snps {
         .map { group_name, runs, antigens, snp_files, bam_files, index_files -> [group_name, *antigens.unique()] }
         .join(asbs)
         .groupTuple(by: 1)
-        .multiMap { 
+        .map { 
             groups, antigen, asbs -> 
             tf_asbs: [antigen, asbs]
-            tfs: antigen 
         }
-        .set { out_ch }
-    jaspar_motifs = pullMotifs(out_ch.tfs, file("${projectDir}/py/pull_jaspar_motifs.py"))
-    asbs_motifs = out_ch.tf_asbs.join(jaspar_motifs)
+        .set { tf_asbs }
+    jaspar_motifs = pullMotifs(tf_asbs, file("${projectDir}/py/pull_jaspar_motifs.py"))
+    asbs_motifs = tf_asbs.join(jaspar_motifs)
 
     genomepy_idx = getGenomepy()
 
@@ -179,17 +178,16 @@ workflow filter_snps {
     motifs
         .groupTuple()
         .map { antigen, bam_files, motifs, kmers -> [antigen, motifs] }
-        .join(out_ch.tf_asbs)
+        .join(tf_asbs)
         .set { nopeak_motifs }
 
     nopeak_filt = filterByNoPeakMotifs(nopeak_motifs, genomepy_idx, file("${projectDir}/py/filter_snps_by_NoPeak_motifs.py"))
 
     // join all annotated asb channels
-    out_ch.tf_asbs
+    tf_asbs
         .join(jaspar_filt.filt_asb, remainder: true)
         .join(nopeak_filt.filt_asb, remainder: true)
         .set { all_asbs }
      
     compileMotifInformation(all_asbs, file("${projectDir}/py/compile_asb_information.py"))
-
 }
