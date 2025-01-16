@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Motif calling with NoPeak
+- Design document
 ### Changed
 
 ## [[0.8.1]](https://git.ecdf.ed.ac.uk/oalmelid/baal-nf/compare/0.8.0...0.8.1) - 11.08.2022

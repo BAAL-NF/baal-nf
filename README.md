@@ -13,7 +13,7 @@ Baal-NF is a pipeline for computing allele-specific binding variants (ASBVs) in 
 It features quality checking and reporting using fastqc, fastq-screen and multiqc, and uses the [BaalChIP](https://github.com/InesdeSantiago/BaalChIP) R package for the detection of ASBVs.
 The pipeline is run using nextflow, and currently supports execution using native environments, anaconda, docker and singularity.
 
-![Pipeline flow](img/baal_pipeline.png)
+For more details on the design and each process in the pipeline, see [the design docs](doc/Design.md)
 
 # Usage and Configuration
 
@@ -31,7 +31,7 @@ In a similar manner, reference genomes for `fastq-screen` are downloaded automat
 
 The pipeline currently supports docker, singularity and anaconda for dependency management. We recommend using docker or singularity for reproducibility, though anaconda may be used if your computing infrastructure does not support containers. 
 
-If using anaconda, you will need to manually create an anaconda environment and install our modified version of BaalChIP manually from (https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP). The path to this environment should then be provided as the parameter `baal_chip_env` (see below).
+If using anaconda, you will need to manually create an anaconda environment and install our modified version of BaalChIP manually from https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP. The path to this environment should then be provided as the parameter `baal_chip_env` (see below).
 
 The following configuration profiles are available for general use
 
@@ -40,7 +40,7 @@ The following configuration profiles are available for general use
 | docker | Use the docker container engine |
 | singularity | Use the singularity container engine |
 | conda | Use anaconda environments |
-| gls | Execute using the (https://www.nextflow.io/docs/latest/google.html#cloud-life-sciences)[Google Life Sciences API] |
+| gls | Execute using the [Google Life Sciences API](https://www.nextflow.io/docs/latest/google.html#cloud-life-sciences) |
 | test | Run the pipeline test set, can be used in combination with any of the above environment profiles |
 | eddie | Platform-specific profile for the University of Edinburgh eddie cluster |
 
@@ -83,7 +83,56 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 | save_baal_objects | false | Export BaalChIP objects as RDS files | No
 | motif_kmer_length | 8 | kmer length used by NoPeak when doing motif calling. 8-12 is recommended. | No
 
-# ToDo
+# Output Files and Structure
 
-- Automatic export to SQL or SQLite database
-- Configurable genomes
+All output files are in the folder specied by `params.report_dir`, by default this is the subdirectory `reports` within the launch directory for the pipeline.
+The report directory contains the following subfolders.
+
+## `asb`
+
+This folder contains the output of BaalChIP.
+See [the BaalChIP documentation](https://git.ecdf.ed.ac.uk/oalmelid/BaalChIP/-/blob/dev/vignettes/BaalChIP.Rmd) for details on this.
+
+## `baal_objects`
+
+Only available when `params.save_baal_objects` is set to `true`.
+RDS files produced by BaalChIP when counting reads overlapping each allele of a SNP.
+These files are mainly useful for debugging.
+
+## `baal_reports`
+
+BaalChIP run summary as a pdf.
+This contains information about corrections for RAF and CNV, as well as details on filtering done by BaalChIP.
+
+## `bed_files`
+
+The result of taking the union of all peak call bed files in the source directory.
+
+## `enrichment`
+
+Output from GAT, these calculate the relative enrichment of ASB sites in various regions of the genome, compared to a background of all heterozygous SNPs in the given cell line.
+
+## `logs`
+
+Logs from bowtie2 and umi_tools (`dedup`).
+
+## `motifs`
+
+Motif calls and kmer profiles as produced by NoPeak.
+
+## `multiQC`
+
+Collated QC reports from multiQC.
+This report combines the reports from fastqc, fastq-screen, bowtie2 and picard into one report.
+
+## `pipeline_info`
+
+Nextflow reports, including pipeline performance statistics, timelines, a trace report, a diagram of the DAG and a CSV file summarising the completed sets of cell lines and transcription factors.
+
+## `preFastQC`
+
+FastQC reports for the initial QC run.
+
+## `samples`
+
+Sample files provided to BaalChIP. These contain details on which sequencing runs were included in the ASB calculation.
