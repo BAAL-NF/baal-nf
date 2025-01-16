@@ -114,7 +114,7 @@ The remaining two dockerfiles are currently in this repository in the [container
 Each subfolder has a makefile with e.g. container tags, current labels and versions.
 
 The baal-chip-env container should arguably be moved to the BaalChIP repository and offered to the package creators.
-However, since we are building from an internal gitlab version of that repository, it currently resides here.
+However, since we build this container from an internal gitlab version of that repository, it currently resides here.
 To build the BaalChIP container, you will need to create a shell script named `credentials.sh` inside the container folder which exports two environment variables.
 These are
 ```
