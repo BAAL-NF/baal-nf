@@ -101,11 +101,14 @@ The pipeline currently uses three containers.
 These are
 
 - nopeak
+- nopeak-utils
 - baal-chip-env
 - baal-nf-env
 
 The nopeak dockerfile has been passed upstream to the [NoPeak repository](https://github.com/menzel/nopeak).
-We use our own version of the container, which currently exists in `docker://oalmelid/nopeak:latest`.
+We use our own version of the container, which currently exists in `docker://oalmelid/nopeak:0.1.0`.
+
+The nopeak-utils dockerfile exists in the [nopeak-utils repository](https://github.com/BAAL-NF/nopeak-utils), and includes custom libraries/scripts for handling JASPAR and NoPeak motifs in the baal-nf pipeline.
 
 The remaining two dockerfiles are currently in this repository in the [containers](/containers/) subdirectory.
 Each subfolder has a makefile with e.g. container tags, current labels and versions.
@@ -277,6 +280,23 @@ Process: `no_peak::getMotifs`
 All of the above is combined to perform motif calling using NoPeak.
 Motif calls per fastq file are output to `reports/motifs/<Transcription Factor>/motifs`
 
+### Pulling data for motif-mapping process
+
+Processes:
+- `filter_snps:pullMotifs`
+- `filter_snps:getGenomepy`
+
+The pullMotifs process uses the script `py/pull_jaspar_motifs.py` to pull all JASPAR motifs for the transcription factors being investigated in a given run. This uses the JASPAR RESTful API. The getGenomepy process downloads the genomepy reference required in subsequent motif-mapping steps by GimmeMotifs.
+
+### Mapping heterozygous SNPs to motifs
+
+Processes:
+- `filter_snps:filterByJASPARMotifs`
+- `filter_snps:filterByNoPeakMotifs`
+- `filter_snps:compileMotifInformation`
+
+For all JASPAR motifs that are pulled for a given TF, all heterozygous SNPs for that same are scored against this JASPAR motif set, by taking the sequence surrounding each SNP (+/- 25bp) and asking whether it belongs to this motif at a FPR < 0.05 compared to a random background sequence. The same is done for all NoPeak motifs. Here, NoPeak motifs are also characterized with respect to JASPAR motifs as a reference. Finally, information across these runs is summarized at the SNP-cell line-TF level, but only for "high-quality" motifs.
+
 ## Post-processing
 
 ### multiQC
@@ -319,7 +339,6 @@ This can be particularly useful for just checking if a given package is installe
 
 - Migrate BaalChIP to MCMC for whole monte carlo run
 - Fix BaalChIP unit tests
-- Motif calling and filtering
 - Refactor pipeline to reduce number of parameters being passed around
 - Allow for other genomes than hg19
 
