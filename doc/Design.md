@@ -345,167 +345,103 @@ This can be particularly useful for just checking if a given package is installe
 # Flowchart
 
 ```mermaid
-flowchart TB
-    subgraph " "
-    v0["Channel.fromPath"]
-    v4["fastqc_conf"]
-    v17["fastqc_conf"]
-    v36["index_files"]
-    v52["Channel.of"]
-    v54["parse_script"]
-    v57["genome"]
-    v67["report_md"]
-    v70["script"]
-    v73["bedfile_script"]
-    v75["annotations"]
-    v81["pullMotifsScript"]
-    v85["filterScript"]
-    v91["filterScript"]
-    v100["compileScript"]
-    end
-    subgraph filter_fastq_before
-    subgraph fastqc_before_trimming
-    v5([fastQC])
-    v6([getFastqcResult])
-    v1(( ))
-    end
-    end
-    v14([reportFastQC])
-    subgraph " "
-    v15["reports"]
-    v38[" "]
-    v69[" "]
-    v87[" "]
-    v93[" "]
-    v94[" "]
-    v95[" "]
-    v96[" "]
-    v97[" "]
-    v102[" "]
-    v111[" "]
-    end
-    v16([trimGalore])
-    subgraph filter_fastq_after
-    subgraph fastqc_after_trimming
-    v18([fastQC])
-    v19([getFastqcResult])
-    end
-    subgraph fastq_screen
-    v23([fetchFastqScreenFiles])
-    v24([fastqScreen])
-    v25([getFastqScreenResult])
-    end
-    end
-    subgraph create_bam
-    v37([createBam])
-    v39([index])
-    end
-    subgraph multi_qc
-    v47([multiQC])
-    v103(( ))
-    end
-    subgraph no_peak
-    v53([getFragmentSize])
-    v55([parseFragmentSize])
-    v56([bamToBed])
-    v58([profileMotifs])
-    v60([getMotifs])
-    v59(( ))
-    end
-    v61([mergeBeds])
-    subgraph run_baal
-    v63([createSampleFile])
-    v66([baalProcessBams])
-    v68([baalGetASB])
-    end
-    subgraph process_results
-    v71([overlapPeaks])
-    v74([makeGatBedFiles])
-    v76([runGat])
-    end
-    subgraph filter_snps
-    v82([pullMotifs])
-    v84([getGenomepy])
-    v86([filterByJASPARMotifs])
-    v92([filterByNoPeakMotifs])
-    v101([compileMotifInformation])
-    end
-    v0 --> v1
-    v4 --> v5
-    v1 --> v5
-    v5 --> v6
-    v5 --> v1
-    v6 --> v1
-    v1 --> v14
-    v14 --> v15
-    v1 --> v16
-    v16 --> v18
-    v16 --> v24
-    v16 --> v1
-    v17 --> v18
-    v18 --> v19
-    v18 --> v1
-    v19 --> v1
-    v23 --> v24
-    v24 --> v25
-    v24 --> v1
-    v25 --> v1
-    v36 --> v37
-    v1 --> v37
-    v37 --> v39
-    v37 --> v38
-    v37 --> v1
-    v39 --> v1
-    v1 --> v47
-    v47 --> v103
-    v52 --> v58
-    v1 --> v53
-    v53 --> v55
-    v54 --> v55
-    v55 --> v59
-    v1 --> v56
-    v56 --> v58
-    v57 --> v58
-    v58 --> v59
-    v59 --> v60
-    v60 --> v1
-    v1 --> v61
-    v61 --> v1
-    v1 --> v63
-    v63 --> v1
-    v1 --> v66
-    v66 --> v68
-    v67 --> v68
-    v68 --> v71
-    v68 --> v69
-    v68 --> v103
-    v70 --> v71
-    v71 --> v1
-    v71 --> v103
-    v73 --> v74
-    v1 --> v74
-    v74 --> v76
-    v75 --> v76
-    v76 --> v103
-    v81 --> v82
-    v1 --> v82
-    v82 --> v1
-    v84 --> v86
-    v84 --> v92
-    v85 --> v86
-    v1 --> v86
-    v86 --> v87
-    v86 --> v1
-    v91 --> v92
-    v1 --> v92
-    v92 --> v97
-    v92 --> v96
-    v92 --> v95
-    v92 --> v94
-    v92 --> v93
-    v92 --> v1
-    v100 --> v101
-    v1 --> v101
-    v101 --> v102
-    v103 --> v111
+flowchart TD
+    p0((Channel.fromPath))
+    p4([fastqc_conf])
+    p17([fastqc_conf])
+    p36([index_files])
+    p52((Channel.of))
+    p54([parse_script])
+    p57([genome])
+    p67([report_md])
+    p70([script])
+    p73([bedfile_script])
+    p75([annotations])
+    p81([pullMotifsScript])
+    p85([filterScript])
+    p91([filterScript])
+    p100([compileScript])
+    
+    p5([fastQC])
+    p6([getFastqcResult])
+    p14([reportFastQC])
+    p15((reports))
+    p16([trimGalore])
+    p18([fastQC])
+    p19([getFastqcResult])
+    p23([fetchFastqScreenFiles])
+    p24([fastqScreen])
+    p25([getFastqScreenResult])
+    p37([createBam])
+    p39([index])
+    p47([multiQC])
+    p103(( ))
+    p53([getFragmentSize])
+    p55([parseFragmentSize])
+    p56([bamToBed])
+    p58([profileMotifs])
+    p60([getMotifs])
+    p59(( ))
+    p61([mergeBeds])
+    p63([createSampleFile])
+    p66([baalProcessBams])
+    p68([baalGetASB])
+    p71([overlapPeaks])
+    p74([makeGatBedFiles])
+    p76([runGat])
+    p82([pullMotifs])
+    p84([getGenomepy])
+    p86([filterByJASPARMotifs])
+    p92([filterByNoPeakMotifs])
+    p101([compileMotifInformation])
+    p102([" "])
+    p111([" "])
+
+    %% Connections (all linked to create a single workflow)
+    p0 --> p5
+    p4 --> p5
+    p5 --> p6
+    p6 --> p14
+    p14 --> p15
+    p0 --> p16
+    p16 --> p18
+    p17 --> p18
+    p18 --> p19
+    p16 --> p24
+    p23 --> p24
+    p24 --> p25
+    p36 --> p37
+    p37 --> p39
+    p37 --> p47
+    p39 --> p47
+    p52 --> p58
+    p53 --> p55
+    p54 --> p55
+    p55 --> p59
+    p56 --> p58
+    p57 --> p58
+    p58 --> p59
+    p59 --> p60
+    p60 --> p61
+    p61 --> p63
+    p63 --> p66
+    p66 --> p68
+    p68 --> p71
+    p68 --> p103
+    p70 --> p71
+    p71 --> p74
+    p73 --> p74
+    p74 --> p76
+    p75 --> p76
+    p76 --> p103
+    p81 --> p82
+    p82 --> p84
+    p84 --> p86
+    p85 --> p86
+    p86 --> p92
+    p91 --> p92
+    p92 --> p101
+    p100 --> p101
+    p101 --> p102
+    p103 --> p111
 ```
