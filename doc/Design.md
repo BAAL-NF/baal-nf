@@ -345,7 +345,7 @@ This can be particularly useful for just checking if a given package is installe
 # Flowchart
 
 ```mermaid
-flowchart TD
+flowchart TB
     subgraph " "
     v0["Channel.fromPath"]
     v4["fastqc_conf"]
