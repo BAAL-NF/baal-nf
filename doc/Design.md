@@ -346,83 +346,166 @@ This can be particularly useful for just checking if a given package is installe
 
 ```mermaid
 flowchart TD
-    p0((Channel.fromPath))
-    p4[fastqc_conf]
-    p17[fastqc_conf]
-    p36[create_bam:index_files]
-    p52((Channel.of))
-    p53[no_peak:getFragmentSize]
-    p54[no_peak:parseFragmentSize]
-    p55[no_peak:bamToBed]
-    p56((genome))
-    p57[no_peak:profileMotifs]
-    p58[no_peak:getMotifs]
-    p59(( ))
-    p61[mergeBeds]
-    p67((report_md))
-    p70((script))
-    p73((bedfile_script))
-    p75((annotations))
-    p81[filter_snps:pullMotifsScript]
-    p85[filter_snps:filterByJASPARMotifs]
-    p91[filter_snps:filterByNoPeakMotifs]
-    p100[filter_snps:compileMotifInformation]
-    p5[filter_fastq_before:fastqc_before_trimming:fastQC]
-    p6[filter_fastq_before:fastqc_before_trimming:getFastqcResult]
-    p14[reportFastQC]
-    p15(( ))
-    p16[trimGalore]
-    p18[filter_fastq_after:fastqc_after_trimming:fastQC]
-    p19[filter_fastq_after:fastqc_after_trimming:getFastqcResult]
-    p23[filter_fastq_after:fastq_screen:fetchFastqScreenFiles]
-    p24[filter_fastq_after:fastq_screen:fastqScreen]
-    p25[filter_fastq_after:fastq_screen:getFastqScreenResult]
-    p37[create_bam:createBam]
-    p39[create_bam:index]
-    p47[multi_qc:multiQC]
-    p63[run_baal:createSampleFile]
-    p66[run_baal:baalProcessBams]
-    p68[run_baal:baalGetASB]
-    p71[process_results:overlapPeaks]
-    p74[process_results:makeGatBedFiles]
-    p76[process_results:runGat]
-    p82[filter_snps:pullMotifs]
-    p84[filter_snps:getGenomepy]
-    p0 --> p5
-    p4 --> p5
-    p5 --> p6
-    p6 --> p14
-    p14 -->|reports| p15
-    p5 --> p16
-    p16 -->|fastq_ch| p18
-    p16 -->|fastq_ch| p24
-    p17 --> p18
-    p18 --> p19
-    p23 --> p24
-    p24 --> p25
-    p36 --> p37
-    p37 --> p39
-    p37 -->|report| p47
-    p52 --> p53
-    p53 --> p54
-    p54 --> p55
-    p55 --> p57
-    p56 --> p57
-    p57 --> p58
-    p58 --> p59
-    p59 -->|output| p61
-    p61 -->|merged_data| p63
-    p63 --> p66
-    p66 --> p68
-    p67 --> p68
-    p68 -->|baal_results| p71
-    p70 --> p71
-    p71 -->|overlap_peaks_results| p74
-    p73 --> p74
-    p74 -->|gat_results| p76
-    p75 --> p76
-    p81 --> p82
-    p84 --> p85
-    p85 -->|filtered_motifs| p91
-    p91 --> p100
+    subgraph " "
+    v0["Channel.fromPath"]
+    v4["fastqc_conf"]
+    v17["fastqc_conf"]
+    v36["index_files"]
+    v52["Channel.of"]
+    v54["parse_script"]
+    v57["genome"]
+    v67["report_md"]
+    v70["script"]
+    v73["bedfile_script"]
+    v75["annotations"]
+    v81["pullMotifsScript"]
+    v85["filterScript"]
+    v91["filterScript"]
+    v100["compileScript"]
+    end
+    subgraph filter_fastq_before
+    subgraph fastqc_before_trimming
+    v5([fastQC])
+    v6([getFastqcResult])
+    v1(( ))
+    end
+    end
+    v14([reportFastQC])
+    subgraph " "
+    v15["reports"]
+    v38[" "]
+    v69[" "]
+    v87[" "]
+    v93[" "]
+    v94[" "]
+    v95[" "]
+    v96[" "]
+    v97[" "]
+    v102[" "]
+    v111[" "]
+    end
+    v16([trimGalore])
+    subgraph filter_fastq_after
+    subgraph fastqc_after_trimming
+    v18([fastQC])
+    v19([getFastqcResult])
+    end
+    subgraph fastq_screen
+    v23([fetchFastqScreenFiles])
+    v24([fastqScreen])
+    v25([getFastqScreenResult])
+    end
+    end
+    subgraph create_bam
+    v37([createBam])
+    v39([index])
+    end
+    subgraph multi_qc
+    v47([multiQC])
+    v103(( ))
+    end
+    subgraph no_peak
+    v53([getFragmentSize])
+    v55([parseFragmentSize])
+    v56([bamToBed])
+    v58([profileMotifs])
+    v60([getMotifs])
+    v59(( ))
+    end
+    v61([mergeBeds])
+    subgraph run_baal
+    v63([createSampleFile])
+    v66([baalProcessBams])
+    v68([baalGetASB])
+    end
+    subgraph process_results
+    v71([overlapPeaks])
+    v74([makeGatBedFiles])
+    v76([runGat])
+    end
+    subgraph filter_snps
+    v82([pullMotifs])
+    v84([getGenomepy])
+    v86([filterByJASPARMotifs])
+    v92([filterByNoPeakMotifs])
+    v101([compileMotifInformation])
+    end
+    v0 --> v1
+    v4 --> v5
+    v1 --> v5
+    v5 --> v6
+    v5 --> v1
+    v6 --> v1
+    v1 --> v14
+    v14 --> v15
+    v1 --> v16
+    v16 --> v18
+    v16 --> v24
+    v16 --> v1
+    v17 --> v18
+    v18 --> v19
+    v18 --> v1
+    v19 --> v1
+    v23 --> v24
+    v24 --> v25
+    v24 --> v1
+    v25 --> v1
+    v36 --> v37
+    v1 --> v37
+    v37 --> v39
+    v37 --> v38
+    v37 --> v1
+    v39 --> v1
+    v1 --> v47
+    v47 --> v103
+    v52 --> v58
+    v1 --> v53
+    v53 --> v55
+    v54 --> v55
+    v55 --> v59
+    v1 --> v56
+    v56 --> v58
+    v57 --> v58
+    v58 --> v59
+    v59 --> v60
+    v60 --> v1
+    v1 --> v61
+    v61 --> v1
+    v1 --> v63
+    v63 --> v1
+    v1 --> v66
+    v66 --> v68
+    v67 --> v68
+    v68 --> v71
+    v68 --> v69
+    v68 --> v103
+    v70 --> v71
+    v71 --> v1
+    v71 --> v103
+    v73 --> v74
+    v1 --> v74
+    v74 --> v76
+    v75 --> v76
+    v76 --> v103
+    v81 --> v82
+    v1 --> v82
+    v82 --> v1
+    v84 --> v86
+    v84 --> v92
+    v85 --> v86
+    v1 --> v86
+    v86 --> v87
+    v86 --> v1
+    v91 --> v92
+    v1 --> v92
+    v92 --> v97
+    v92 --> v96
+    v92 --> v95
+    v92 --> v94
+    v92 --> v93
+    v92 --> v1
+    v100 --> v101
+    v1 --> v101
+    v101 --> v102
+    v103 --> v111
 ```
