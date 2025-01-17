@@ -344,6 +344,8 @@ This can be particularly useful for just checking if a given package is installe
 
 # Flowchart
 
+![DAG](./pipeline.svg)
+
 ```mermaid
 flowchart TD
     p0((Channel.fromPath))
