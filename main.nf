@@ -122,6 +122,9 @@ process reportFastQC {
 
     script:
     'exit 0'
+
+    stub:
+    'exit 0'
 }
 
 
@@ -130,6 +133,7 @@ include { mergeBeds; run_baal } from './modules/baal.nf'
 include { multi_qc } from './modules/qc.nf'
 include { process_results; create_report } from './modules/analysis.nf'
 include { no_peak } from './modules/motif.nf'
+include { filter_snps } from './modules/filter.nf'
 
 workflow {
     // Load CSV file
@@ -193,6 +197,9 @@ workflow {
     run_baal(mergeBeds.out.join(group_ch.baal_files))
 
     process_results(run_baal.out.asb, group_ch.snp_files)
+
+    // filter snps on motifs
+    filter_snps(process_results.out.overlap_peaks, group_ch.baal_files, no_peak.out.motifs)
 
     create_report(run_baal.out.report, multi_qc.out, process_results.out.overlap_peaks, process_results.out.gat)
 }

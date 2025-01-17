@@ -9,6 +9,11 @@ process bamToBed {
     """
     bamToBed -i ${bam_file} | sort -k1,1 -k2n  > ${bam_file.baseName}.bed
     """
+
+    stub:
+    """
+    touch ${bam_file.baseName}.bed
+    """
 }
 
 process profileMotifs {
@@ -16,59 +21,86 @@ process profileMotifs {
     label 'bigmem'
     label 'nopeak'
 
-    publishDir("${params.report_dir}/motifs/${antigen}/profiles/", mode: "copy")
+    publishDir("${params.report_dir}/motifs/${antigen}/profiles/${kmer}mer/", mode: "copy")
 
     input:
     tuple val(antigen), path(bam_file), path(bed_file)
     path genome
+    each kmer
 
     output:
-    tuple val(antigen), val("${bam_file}"),  path("profile_${bed_file}.csv")
+    tuple val(antigen), val("${bam_file}"), val(kmer), path("profile_${bed_file}.csv")
 
     script:
     """
-    noPeak PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${params.motif_kmer_length}
+    noPeak PROFILE -t ${task.cpus} --reads ${bed_file} --genome ${genome} -k ${kmer}
+    """
+
+    stub:
+    """
+    touch profile_${bed_file}.csv
     """
 }
 
 process getFragmentSize {
+    label 'moremem'
     publishDir("${params.report_dir}/motifs/${antigen}/spp/", mode: "copy")
     input:
     tuple val(antigen), path(bam_file)
 
     output:
-    tuple val(antigen), path(bam_file), path("${bam_file.baseName}.txt")
+    tuple val(antigen), path(bam_file), path("${bam_file.baseName}.txt"), env(quality)
 
     script:
     """
     run_spp.R -c=${bam_file} -out=${bam_file.baseName}.txt
+
+    # Keep only top fragment size in this file
+    sed -r 's/,[^\t]+//g' ${bam_file.baseName}.txt > ${bam_file.baseName}.filt.txt
+
+    # Export quality score as variable in the output channel
+    quality=\$( awk '{print \$11}' ${bam_file.baseName}.filt.txt )
+    """
+
+    stub:
+    """
+    touch ${bam_file.baseName}.txt
+    quality="2"
     """
 }
 
 process parseFragmentSize {
     input:
-    tuple val(antigen), path(bam_file), path(spp_output)
+    tuple val(antigen), path(bam_file), path(spp_output), val(quality)
     path parse_script
 
     output:
-    tuple val(antigen), val("${bam_file}"), path("${bam_file.baseName}.fragment_size.txt")
+    tuple val(antigen), val("${bam_file}"), path("${bam_file.baseName}.fragment_size.txt"), val(quality)
 
     script:
     """
     python ${parse_script} ${spp_output} ${bam_file.baseName}.fragment_size.txt
+    """
+
+    stub:
+    """
+    touch ${bam_file.baseName}.fragment_size.txt
     """
 }
 
 process getMotifs {
     label 'nopeak'
 
-    publishDir("${params.report_dir}/motifs/${antigen}/motifs/", mode: "copy")
+    publishDir("${params.report_dir}/motifs/${antigen}/motifs/${kmer}mer/", mode: "copy")
 
     input:
-    tuple  val(antigen), val(bam_file), path(profile), path(fragment_size)
+    tuple  val(antigen), val(bam_file), val(kmer), path(profile), path(fragment_size), val(quality)
 
     output:
-    tuple val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
+    tuple val(antigen), val(bam_file), path("${bam_file}.motifs.txt"), path("${bam_file}.kmers.txt")
+
+    when:
+    quality != "-2" && quality != "-1" && quality != "0"
 
     script:
     """
@@ -76,6 +108,11 @@ process getMotifs {
     noPeak LOGO --strict --signal ${profile} --fraglen \$FRAGMENT_SIZE --export-kmers ${bam_file}.kmers.txt > ${bam_file}.motifs.txt
     """
 
+    stub:
+    """
+    touch ${bam_file}.motifs.txt
+    touch ${bam_file}.kmers.txt
+    """
 }
 
 workflow no_peak {
@@ -84,13 +121,19 @@ workflow no_peak {
 
     main:
 
+    // Create value channel for sensitivity analysis
+    kmer_lengths = Channel.of(params.k)
+
     parse_script = file("${projectDir}/py/get_fragment_sizes.py")
     getFragmentSize(input) | set { spp_output }
     parseFragmentSize(spp_output, parse_script)
     
     genome = file(params.nopeak_index, type: 'dir', checkIfExists: true)
     bamToBed(input) | set { pileup }
-    profileMotifs(pileup, genome)
+    profileMotifs(pileup, genome, kmer_lengths)
 
     profileMotifs.out.join(parseFragmentSize.out, by:[0,1] ) | getMotifs
+
+    emit:
+    motifs = getMotifs.out
 }

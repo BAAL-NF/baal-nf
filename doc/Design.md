@@ -101,17 +101,20 @@ The pipeline currently uses three containers.
 These are
 
 - nopeak
+- nopeak-utils
 - baal-chip-env
 - baal-nf-env
 
 The nopeak dockerfile has been passed upstream to the [NoPeak repository](https://github.com/menzel/nopeak).
-We use our own version of the container, which currently exists in `docker://oalmelid/nopeak:latest`.
+We use our own version of the container, which currently exists in `docker://oalmelid/nopeak:0.1.0`.
+
+The nopeak-utils dockerfile exists in the [nopeak-utils repository](https://github.com/BAAL-NF/nopeak-utils), and includes custom libraries/scripts for handling JASPAR and NoPeak motifs in the baal-nf pipeline.
 
 The remaining two dockerfiles are currently in this repository in the [containers](/containers/) subdirectory.
 Each subfolder has a makefile with e.g. container tags, current labels and versions.
 
 The baal-chip-env container should arguably be moved to the BaalChIP repository and offered to the package creators.
-However, since we are building from an internal gitlab version of that repository, it currently resides here.
+However, since we build this container from an internal gitlab version of that repository, it currently resides here.
 To build the BaalChIP container, you will need to create a shell script named `credentials.sh` inside the container folder which exports two environment variables.
 These are
 ```
@@ -277,6 +280,23 @@ Process: `no_peak::getMotifs`
 All of the above is combined to perform motif calling using NoPeak.
 Motif calls per fastq file are output to `reports/motifs/<Transcription Factor>/motifs`
 
+### Pulling data for motif-mapping process
+
+Processes:
+- `filter_snps:pullMotifs`
+- `filter_snps:getGenomepy`
+
+The pullMotifs process uses the script `py/pull_jaspar_motifs.py` to pull all JASPAR motifs for the transcription factors being investigated in a given run. This uses the JASPAR RESTful API. The getGenomepy process downloads the genomepy reference required in subsequent motif-mapping steps by GimmeMotifs.
+
+### Mapping heterozygous SNPs to motifs
+
+Processes:
+- `filter_snps:filterByJASPARMotifs`
+- `filter_snps:filterByNoPeakMotifs`
+- `filter_snps:compileMotifInformation`
+
+For all JASPAR motifs that are pulled for a given TF, all heterozygous SNPs for that same are scored against this JASPAR motif set, by taking the sequence surrounding each SNP (+/- 25bp) and asking whether it belongs to this motif at a FPR < 0.05 compared to a random background sequence. The same is done for all NoPeak motifs. Here, NoPeak motifs are also characterized with respect to JASPAR motifs as a reference. Finally, information across these runs is summarized at the SNP-cell line-TF level, but only for "high-quality" motifs.
+
 ## Post-processing
 
 ### multiQC
@@ -319,200 +339,9 @@ This can be particularly useful for just checking if a given package is installe
 
 - Migrate BaalChIP to MCMC for whole monte carlo run
 - Fix BaalChIP unit tests
-- Motif calling and filtering
 - Refactor pipeline to reduce number of parameters being passed around
 - Allow for other genomes than hg19
 
 # Flowchart
 
-```mermaid
-flowchart TD
-    p0((Channel.fromPath))
-    p1([splitCsv])
-    p2([map])
-    p3([multiMap])
-    p4(( ))
-    p5[filter_fastq_before:fastqc_before_trimming:fastQC]
-    p6[filter_fastq_before:fastqc_before_trimming:getFastqcResult]
-    p7([filter])
-    p8([map])
-    p9([map])
-    p10([join])
-    p11([join])
-    p12([groupTuple])
-    p13([map])
-    p14[reportFastQC]
-    p15(( ))
-    p16[trimGalore]
-    p17(( ))
-    p18[filter_fastq_after:fastqc_after_trimming:fastQC]
-    p19[filter_fastq_after:fastqc_after_trimming:getFastqcResult]
-    p20([filter])
-    p21([map])
-    p22([map])
-    p23[filter_fastq_after:fastq_screen:fetchFastqScreenFiles]
-    p24[filter_fastq_after:fastq_screen:fastqScreen]
-    p25[filter_fastq_after:fastq_screen:getFastqScreenResult]
-    p26([filter])
-    p27([map])
-    p28([join])
-    p29([join])
-    p30([mix])
-    p31([join])
-    p32([groupTuple])
-    p33([map])
-    p34([transpose])
-    p35([multiMap])
-    p36(( ))
-    p37[create_bam:createBam]
-    p38(( ))
-    p39[create_bam:index]
-    p40([mix])
-    p41([mix])
-    p42([groupTuple])
-    p43([map])
-    p44([join])
-    p45([groupTuple])
-    p46([map])
-    p47[multi_qc:multiQC]
-    p48([join])
-    p49([groupTuple])
-    p50([multiMap])
-    p51([map])
-    p52[no_peak:getFragmentSize]
-    p53(( ))
-    p54[no_peak:parseFragmentSize]
-    p55[no_peak:bamToBed]
-    p56(( ))
-    p57[no_peak:profileMotifs]
-    p58([join])
-    p59[no_peak:getMotifs]
-    p60(( ))
-    p61[mergeBeds]
-    p62([join])
-    p63[run_baal:createSampleFile]
-    p64([map])
-    p65([join])
-    p66[run_baal:baalProcessBams]
-    p67(( ))
-    p68[run_baal:baalGetASB]
-    p69(( ))
-    p70(( ))
-    p71[process_results:overlapPeaks]
-    p72([join])
-    p73(( ))
-    p74[process_results:makeGatBedFiles]
-    p75(( ))
-    p76[process_results:runGat]
-    p77([map])
-    p78([map])
-    p79([map])
-    p80([join])
-    p81([join])
-    p82([map])
-    p83([join])
-    p84([collectFile])
-    p85(( ))
-    p0 --> p1
-    p1 --> p2
-    p2 --> p3
-    p3 -->|fastq_list| p5
-    p3 -->|metadata| p11
-    p4 -->|fastqc_conf| p5
-    p5 --> p6
-    p6 --> p7
-    p7 --> p8
-    p8 -->|fastq_list| p10
-    p5 --> p9
-    p9 -->|report| p11
-    p3 -->|fastq_list| p10
-    p10 -->|result| p16
-    p11 --> p12
-    p12 --> p13
-    p13 --> p14
-    p14 -->|reports| p15
-    p16 -->|fastq_ch| p18
-    p16 --> p40
-    p17 -->|fastqc_conf| p18
-    p18 --> p19
-    p19 --> p20
-    p20 --> p21
-    p21 -->|fastq_list| p28
-    p18 --> p22
-    p22 -->|report| p30
-    p23 --> p24
-    p16 -->|fastq_ch| p24
-    p24 --> p25
-    p24 -->|report| p30
-    p25 --> p26
-    p26 --> p27
-    p27 -->|result| p28
-    p28 --> p29
-    p16 -->|fastq_ch| p29
-    p29 -->|fastq_files| p31
-    p30 -->|report| p40
-    p3 -->|metadata| p31
-    p31 --> p32
-    p32 --> p33
-    p33 --> p34
-    p34 --> p35
-    p35 -->|fastq_files| p37
-    p35 -->|metadata| p44
-    p36 -->|index_files| p37
-    p37 --> p39
-    p37 -->|report| p41
-    p37 --> p38
-    p39 --> p48
-    p40 --> p41
-    p41 --> p42
-    p42 --> p43
-    p43 -->|report| p44
-    p44 --> p45
-    p45 --> p46
-    p46 --> p47
-    p47 -->|multiqc_results| p77
-    p35 -->|metadata| p48
-    p48 -->|merged_data| p49
-    p49 --> p50
-    p50 -->|snp_files| p72
-    p50 --> p62
-    p50 --> p61
-    p48 -->|merged_data| p51
-    p51 -->|input| p52
-    p52 --> p54
-    p53 -->|parse_script| p54
-    p54 --> p58
-    p51 -->|input| p55
-    p55 --> p57
-    p56 -->|genome| p57
-    p57 --> p58
-    p58 --> p59
-    p59 --> p60
-    p61 --> p62
-    p62 -->|baal_groups| p63
-    p63 --> p65
-    p62 -->|baal_groups| p64
-    p64 --> p65
-    p65 --> p66
-    p66 --> p68
-    p67 -->|report_md| p68
-    p68 -->|baal_results| p71
-    p68 -->|asb_report| p78
-    p68 --> p69
-    p70 -->|script| p71
-    p71 -->|overlap_peaks_results| p72
-    p72 --> p74
-    p73 -->|bedfile_script| p74
-    p74 --> p76
-    p75 -->|annotations| p76
-    p76 -->|gat_results| p82
-    p77 -->|multiqc_flat| p81
-    p78 -->|asb_output| p80
-    p71 -->|overlap_peaks_results| p79
-    p79 -->|overlap_peaks_results| p80
-    p80 --> p81
-    p81 -->|combined_results| p83
-    p82 -->|gat_results| p83
-    p83 -->|combined_results| p84
-    p84 --> p85
-```
+![DAG](./pipeline.svg)

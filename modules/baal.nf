@@ -25,6 +25,11 @@ process createSampleFile {
         }
         output += 'EOF\n'
         output
+
+    stub:
+    """
+    touch ${group_name}.tsv
+    """
 }
 
 
@@ -42,6 +47,11 @@ process mergeBeds {
      """
      zcat -f ${bedfiles} | sort -k 1,1 -k2,2n | mergeBed > ${group_name}.bed
      """
+
+    stub:
+    """
+    touch ${group_name}.bed
+    """
 }
 
 process baalProcessBams {
@@ -78,7 +88,12 @@ process baalProcessBams {
     if( ! params.dedup_umi ) script += "res <- filter1allele(res)\n"
 
     script += "saveRDS(res, file='process_bams.rds')\n"
-    script    
+    script 
+
+    stub:
+    """
+    touch process_bams.rds
+    """   
 }
 
 process baalGetASB {
@@ -116,6 +131,13 @@ process baalGetASB {
     # generate final report
     knit("baal_report.Rmd")
     rmarkdown::render("baal_report.md", output_format="all", output_file="${group_name}")
+    """
+
+    stub:
+    """
+    touch ${group_name}.csv
+    touch ${group_name}.html
+    touch ${group_name}.rds
     """
 }
 

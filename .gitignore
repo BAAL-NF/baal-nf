@@ -3,3 +3,5 @@ work
 test/*
 .groovylintrc.json
 .vscode
+reports*
+py/__pycache__*
