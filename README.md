@@ -1,7 +1,12 @@
 This project contains a pipeline for calculating allele-specific binding affinity from a pre-downloaded set of fastq files using BaalChIP.
 
 # Requirements
-- You must have `nextflow > 24.10` installed and `singularity > 3.5`
+- You must have `nextflow > 24.10` installed and `singularity > 3.5`. We reccomment using conda to install the required environment. See [Miniconda installation](https://www.anaconda.com/docs/getting-started/miniconda/install) for instructions on installation. 
+- To create the required environment, please run the following:
+
+```bash
+conda create --name baalnf bioconda::nextflow=24.10 conda-forge::singularity=3.5
+```
 
 # Design
 
@@ -77,6 +82,22 @@ Some configuration can be set using nextflow's usual custom parameters, either o
 | baal_chip_env | null | Only required when using the conda profile. Path to conda environment containing BaalChIP | Yes, if using the conda profile
 | save_baal_objects | false | Export BaalChIP objects as RDS files | No
 | motif_kmer_length | 8 | kmer length used by NoPeak when doing motif calling. 8-12 is recommended. | No
+
+# Running the pipeline
+
+Once you have configured your sample file and specified your input parameters of choice in `your_config.config`, you are ready to run the pipeline! Pull the GitHub repository through nextflow using the following command:
+
+```bash
+nextflow pull BAAL-NF/baal-nf
+```
+
+Once the pipeline repository is pulled, you can run the pipeline using the following command:
+
+```bash
+nextflow run BAAL-NF/baal-nf -c your_config.config -profile your_profile
+```
+
+We reccommend running this in a screen session, as it can take some time, especially with a large number of samples. 
 
 # Output Files and Structure
 
