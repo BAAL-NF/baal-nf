@@ -97,6 +97,8 @@ Once the pipeline repository is pulled, you can run the pipeline using the follo
 nextflow run BAAL-NF/baal-nf -c your_config.config -profile your_profile
 ```
 
+For a full end-to-end run and test dataset, please see [the baal-nf vignette](https://github.com/BAAL-NF/vignette).
+
 We reccommend running this in a screen session, as it can take some time, especially with a large number of samples. 
 
 # Output Files and Structure
