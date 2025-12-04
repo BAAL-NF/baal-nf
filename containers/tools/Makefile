@@ -1,5 +1,5 @@
 LOCAL_IMAGE := baal-nf-env
-REMOTE_IMAGE := roskamsh/${LOCAL_IMAGE}
+REMOTE_IMAGE := oalmelid/${LOCAL_IMAGE}
 TAG := latest
 .DEFAULT_GOAL := image
 
