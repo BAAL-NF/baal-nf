@@ -1,0 +1,14 @@
+name: fastqscreen
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - fastq-screen=0.14
+  - unzip 
+  - p7zip 
+  - xz 
+  - zstd 
+  - git 
+  - procps-ng 
+  - ca-certificates
